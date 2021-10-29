@@ -1,0 +1,7 @@
+version: "3"
+
+services:
+  genshinhelper:
+     image: yindan/genshinhelper
+     environment:
+       COOKIE_MIHOYOBBS: '<COOKIE_MIHOYOBBS>'

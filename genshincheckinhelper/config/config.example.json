@@ -1,0 +1,38 @@
+{
+  "LANGUAGE": "en",
+  "RANDOM_SLEEP_SECS_RANGE": "0-300",
+  "CHECK_IN_TIME": "06:00",
+  "CHECK_RESIN_SECS": 900,
+  "COOKIE_MIHOYOBBS": "",
+  "COOKIE_RESIN_TIMER": "",
+  "COOKIE_BH3": "",
+  "COOKIE_MIYOUBI": "",
+  "CLOUD_GENSHIN": [
+    {
+      "x-rpc-combo_token": "ai=x;ci=x;oi=xxxxxx;ct=xxxxxx;si=xxxxxx;bi=xxxxxx",
+      "x-rpc-client_type": "",
+      "x-rpc-app_version": "",
+      "x-rpc-sys_version": "",
+      "x-rpc-channel": "mihoyo",
+      "x-rpc-device_id": "",
+      "x-rpc-device_name": "",
+      "x-rpc-device_model": "",
+      "x-rpc-app_id": "",
+      "Referer": "https://app.mihoyo.com",
+      "Host": "api-cloudgame.mihoyo.com",
+      "Connection": "Keep-Alive",
+      "Accept-Encoding": "gzip",
+      "User-Agent": "okhttp/3.14.9"
+    }
+  ],
+  "COOKIE_HOYOLAB": "",
+  "COOKIE_WEIBO": "",
+  "COOKIE_KA": "",
+  "SHOPTOKEN": "",
+  "ONEPUSH": {
+    "notifier": "",
+    "params": {
+      "markdown": false
+    }
+  }
+}
