@@ -8,6 +8,8 @@
 from collections.abc import Iterable
 from random import randint
 from time import sleep
+import datetime
+import os
 
 import schedule
 
@@ -15,17 +17,16 @@ try:
     import genshinhelper as gh
     from config import config
 except ImportError:
-    import os
     import sys
 
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     import genshinhelper as gh
     from genshincheckinhelper.config import config
+finally:
+    from genshinhelper.utils import log, get_cookies, nested_lookup, minutes_to_hours, MESSAGE_TEMPLATE, DAIRY_TEMPLATE, FINANCE_TEMPLATE
+from onepush import notify
 
-from genshinhelper.utils import log, get_cookies, nested_lookup, minutes_to_hours, MESSAGE_TEMPLATE, DAIRY_TEMPLATE, FINANCE_TEMPLATE
-from onepush import notify  
-
-version = '1.0.0'
+version = '1.0.1'
 banner = f'''
 +----------------------------------------------------------------+
 |               𒆙  Genshin Check-In Helper v{version}                |
@@ -275,19 +276,76 @@ def job1():
 
 def job2():
     for i in get_cookies(config.COOKIE_RESIN_TIMER):
-        r = gh.YuanShen(i).daily_note
-        current_resin = nested_lookup(r, 'current_resin', fetch_first=True)
-        max_resin = nested_lookup(r, 'max_resin', fetch_first=True)
-        result_str = f'Resin: {current_resin} / {max_resin}'
-        log.info(result_str)
-        if current_resin and current_resin == max_resin:
-            title = '原神签到小助手提醒您: 原粹树脂回满啦!'
-            content = '原粹树脂已全部恢复, 记得及时使用哦.'
-            notify_me(title, content)
-        return result_str
+        ys = gh.YuanShen(i)
+        roles_info = ys.roles_info
+        expedition_fmt = '└─ {character_name:<8} {status_:^8} {remained_time_fmt}\n'
+        RESIN_TIMER_TEMPLATE = '''实时便笺
+    🔅{nickname} {level} {region_name}
+    原粹树脂: {current_resin} / {max_resin} {resin_recovery_datetime_fmt}
+    今日委托: {finished_task_num} / {total_task_num}
+    周本减半: {remain_resin_discount_num} / {resin_discount_num_limit}
+    探索派遣: {current_expedition_num} / {max_expedition_num}
+      {expedition_details}'''
+
+        result = []
+        for i in roles_info:
+            daily_note = ys.get_daily_note(i['game_uid'], i['region'])
+            if not daily_note:
+                break
+
+            details = []
+            for e in daily_note['expeditions']:
+                remained_time = int(e['remained_time'])
+                e['remained_time_fmt'] = '{hour}小时{minute}分钟'.format(**minutes_to_hours(remained_time / 60)) if remained_time else ''
+                e['character_name'] = e['avatar_side_icon'].split('Side_')[1].split('.')[0]
+                e['status_'] = '剩余时间' if e['status'] == 'Ongoing' else '探险完成'
+                details.append(expedition_fmt.format(**e))
+
+            daily_note.update(i)
+            resin_recovery_time = int(daily_note['resin_recovery_time'])
+            resin_recovery_datetime = datetime.datetime.now() + datetime.timedelta(seconds=resin_recovery_time)
+            daily_note['resin_recovery_datetime_fmt'] = f"将于{resin_recovery_datetime.strftime('%Y-%m-%d %H:%M:%S')}全部恢复" if resin_recovery_time else '原粹树脂已全部恢复, 记得及时使用哦'
+            daily_note['expedition_details'] = '      '.join(details)
+            message = RESIN_TIMER_TEMPLATE.format(**daily_note)
+            result.append(message)
+            log.info(message)
+
+            is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
+            content = f'```\n{message}```' if is_markdown else message
+            status = '未满足推送条件, 监控模式运行中...'
+
+            count = 5
+            IS_NOTIFY_STR = f"UID_{i['game_uid']}_IS_NOTIFY_STR"
+            RESIN_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_RESIN_NOTIFY_CNT"
+            EXPEDITION_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_EXPEDITION_NOTIFY_CNT"
+            os.environ[IS_NOTIFY_STR] = 'False'
+            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+
+            if daily_note['current_resin'] >= daily_note['max_resin'] and int(os.environ[RESIN_NOTIFY_CNT_STR]) < count:
+                status = '原粹树脂回满啦!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
+            elif 'Finished' in str(daily_note['expeditions']) and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
+                status = '探索派遣完成啦!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+            
+            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if daily_note['current_resin'] >= daily_note['max_resin'] else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if 'Finished' in str(daily_note['expeditions']) else '0' 
+
+            title = f'原神签到小助手提醒您: {status}'
+            log.info(title)
+            if os.environ[IS_NOTIFY_STR] == 'True':
+                notify_me(title, content)
+        return result
 
 
 def run_once():
+    for i in dict(os.environ):
+        if 'UID_' in i:
+            del os.environ[i]
+
     gh.set_lang(config.LANGUAGE)
     job1()
     if config.COOKIE_RESIN_TIMER:
