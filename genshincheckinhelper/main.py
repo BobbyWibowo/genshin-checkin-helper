@@ -152,18 +152,18 @@ def task7(cookie):
     if not is_event:
         return '原神超话现在没有活动哦'
 
+    title = '原神超话签到提醒'
+    content = '亲爱的旅行者, 原神微博超话签到活动现已开启, 请注意活动时间! 如已完成任务, 请忽略本信息.'
+    notify_me(title, content)
     ids = t.unclaimed_gift_ids()
     if not ids:
         recent_codes = ' *'.join(
             [f"{i['title']} {i['code']}" for i in t.get_mybox_codes()[:3]])
         return f'原神超话签到活动已开启，但是没有未领取的兑换码。\n    最近 3 个码: {recent_codes}'
 
-    title = '原神超话签到提醒'
-    content = '亲爱的旅行者, 原神微博超话签到活动现已开启, 请注意活动时间! 如已完成任务, 请忽略本信息.'
-    notify_me(title, content)
     log.info(f'检测到有 {len(ids)} 个未领取的兑换码')
     raw_codes = [t.get_code(id) for id in ids]
-    return [i['code'] if i['success'] else i['response'] for i in raw_codes]
+    return [i['code'] if i['success'] else str(i['response']['msg'] + '\n    ') for i in raw_codes]
 
 
 def task8(cookie):
