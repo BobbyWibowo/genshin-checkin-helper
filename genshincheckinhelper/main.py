@@ -275,6 +275,7 @@ def job1():
 
 
 def job2():
+    result = []
     for i in get_cookies(config.COOKIE_RESIN_TIMER):
         ys = gh.YuanShen(i)
         roles_info = ys.roles_info
@@ -287,7 +288,6 @@ def job2():
     探索派遣: {current_expedition_num} / {max_expedition_num}
       {expedition_details}'''
 
-        result = []
         for i in roles_info:
             daily_note = ys.get_daily_note(i['game_uid'], i['region'])
             if not daily_note:
@@ -338,7 +338,7 @@ def job2():
             log.info(title)
             if os.environ[IS_NOTIFY_STR] == 'True':
                 notify_me(title, content)
-        return result
+    return result
 
 
 def run_once():
