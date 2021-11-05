@@ -163,7 +163,7 @@ def task7(cookie):
 
     log.info(f'检测到有 {len(ids)} 个未领取的兑换码')
     raw_codes = [t.get_code(id) for id in ids]
-    return [i['code'] if i['success'] else str(i['response']['msg'] + '\n    ') for i in raw_codes]
+    return [str(i['code'] + '\n    ') if i['success'] else str(i['response']['msg'] + '\n    ') for i in raw_codes]
 
 
 def task8(cookie):
