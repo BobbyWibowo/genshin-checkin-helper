@@ -318,21 +318,33 @@ def job2():
             count = 5
             IS_NOTIFY_STR = f"UID_{i['game_uid']}_IS_NOTIFY_STR"
             RESIN_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_RESIN_NOTIFY_CNT"
+            RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_RESIN_THRESHOLD_NOTIFY_CNT"
             EXPEDITION_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_EXPEDITION_NOTIFY_CNT"
             os.environ[IS_NOTIFY_STR] = 'False'
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
+            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
 
-            if daily_note['current_resin'] >= daily_note['max_resin'] and int(os.environ[RESIN_NOTIFY_CNT_STR]) < count:
+            is_full = daily_note['current_resin'] >= daily_note['max_resin']
+            is_threshold = daily_note['current_resin'] >= int(config.RESIN_THRESHOLD)
+            is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
+            is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
+
+            if is_full and is_resin_notify:
                 status = '原粹树脂回满啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
+            elif is_threshold and is_resin_threshold_notify:
+                status = '原粹树脂快满啦!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
             elif 'Finished' in str(daily_note['expeditions']) and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
                 status = '探索派遣完成啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
             
-            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if daily_note['current_resin'] >= daily_note['max_resin'] else '0'
+            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
+            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if 'Finished' in str(daily_note['expeditions']) else '0' 
 
             title = f'原神签到小助手提醒您: {status}'
