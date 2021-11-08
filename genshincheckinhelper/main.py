@@ -291,7 +291,8 @@ def job2():
         for i in roles_info:
             daily_note = ys.get_daily_note(i['game_uid'], i['region'])
             if not daily_note:
-                break
+                log.info(f"未能获取 {i['nickname']} 的实时便笺, 正在跳过...")
+                continue
 
             details = []
             for e in daily_note['expeditions']:
