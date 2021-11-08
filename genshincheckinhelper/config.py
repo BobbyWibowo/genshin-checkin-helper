@@ -14,6 +14,7 @@ CONFIG_DICT = {
     'CHECK_IN_TIME': 'CHECK_IN_TIME',
     'CHECK_RESIN_SECS': 'CHECK_RESIN_SECS',
     'RESIN_THRESHOLD': 'RESIN_THRESHOLD',
+    'RESIN_TIMER_DO_NOT_DISTURB': 'RESIN_TIMER_DO_NOT_DISTURB',
     'COOKIE_MIHOYOBBS': 'COOKIE_MIHOYOBBS',
     'COOKIE_RESIN_TIMER': 'COOKIE_RESIN_TIMER',
     'COOKIE_BH3': 'COOKIE_BH3',
@@ -58,6 +59,9 @@ class Config(object):
             'LANGUAGE': 'en',
             'RANDOM_SLEEP_SECS_RANGE': '0-300',
             'CHECK_IN_TIME': '06:00',
+            'CHECK_RESIN_SECS': 900,
+            'RESIN_THRESHOLD': 150,
+            'RESIN_TIMER_DO_NOT_DISTURB': '23:00-07:00'
         }
 
         for k, v in default_config_dict.items():

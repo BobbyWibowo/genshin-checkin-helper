@@ -26,7 +26,7 @@ finally:
     from genshinhelper.utils import log, get_cookies, nested_lookup, minutes_to_hours, MESSAGE_TEMPLATE, DAIRY_TEMPLATE, FINANCE_TEMPLATE
 from onepush import notify
 
-version = '1.0.1'
+version = '1.0.3'
 banner = f'''
 +----------------------------------------------------------------+
 |               𒆙  Genshin Check-In Helper v{version}                |
@@ -44,6 +44,17 @@ def random_sleep(interval: str):
     seconds = randint(*[int(i) for i in interval.split('-')])
     log.info('Sleep for {seconds} seconds...'.format(seconds=seconds))
     sleep(seconds)
+
+
+def time_in_range(interval: str):
+    t1, t2 = interval.split('-')
+    now_time = datetime.datetime.now().time()
+    start = datetime.datetime.strptime(t1, '%H:%M').time()
+    end = datetime.datetime.strptime(t2, '%H:%M').time()
+    result = start <= now_time or now_time <= end
+    if start <= end:
+        result = start <= now_time <= end
+    return result
 
 
 def notify_me(title, content):
@@ -329,16 +340,17 @@ def job2():
             is_threshold = daily_note['current_resin'] >= int(config.RESIN_THRESHOLD)
             is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
             is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
+            is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
-            if is_full and is_resin_notify:
+            if is_full and is_resin_notify and not is_do_not_disturb:
                 status = '原粹树脂回满啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
-            elif is_threshold and is_resin_threshold_notify:
+            elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
                 status = '原粹树脂快满啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
-            elif 'Finished' in str(daily_note['expeditions']) and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
+            elif 'Finished' in str(daily_note['expeditions']) and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                 status = '探索派遣完成啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
