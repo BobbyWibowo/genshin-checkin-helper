@@ -330,17 +330,20 @@ def job2():
             IS_NOTIFY_STR = f"UID_{i['game_uid']}_IS_NOTIFY_STR"
             RESIN_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_RESIN_NOTIFY_CNT"
             RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_RESIN_THRESHOLD_NOTIFY_CNT"
+            RESIN_LAST_RECOVERY_TIME = f"UID_{i['game_uid']}_RESIN_LAST_RECOVERY_TIME"
             EXPEDITION_NOTIFY_CNT_STR = f"UID_{i['game_uid']}_EXPEDITION_NOTIFY_CNT"
             os.environ[IS_NOTIFY_STR] = 'False'
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+            os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(resin_recovery_datetime.timestamp())
 
             is_full = daily_note['current_resin'] >= daily_note['max_resin']
             is_threshold = daily_note['current_resin'] >= int(config.RESIN_THRESHOLD)
             is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
             is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
             is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
+            is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - resin_recovery_datetime.timestamp()) > 400
 
             if is_full and is_resin_notify and not is_do_not_disturb:
                 status = '原粹树脂回满啦!'
@@ -350,6 +353,9 @@ def job2():
                 status = '原粹树脂快满啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+            elif is_resin_recovery_time_changed:
+                status = '原粹树脂恢复时间变动啦!'
+                os.environ[IS_NOTIFY_STR] = 'True'
             elif 'Finished' in str(daily_note['expeditions']) and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                 status = '探索派遣完成啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
@@ -358,6 +364,7 @@ def job2():
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if 'Finished' in str(daily_note['expeditions']) else '0' 
+            os.environ[RESIN_LAST_RECOVERY_TIME] = str(resin_recovery_datetime.timestamp())
 
             title = f'原神签到小助手提醒您: {status}'
             log.info(title)
