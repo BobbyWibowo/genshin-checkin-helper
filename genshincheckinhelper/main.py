@@ -215,7 +215,7 @@ def taskgenshinpy(cookie):
 
         account = {}
         if config.GENSHINPY.get('uids'):
-            first_uid = int(config.GENSHINPY.get('uids').split(',')[0])
+            first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
             for a in accounts:
                 if a.uid == first_uid:
                     account = a
@@ -470,7 +470,7 @@ async def job2genshinpy():
 
         uids = []
         if (config.GENSHINPY.get('uids')):
-            for uid in config.GENSHINPY.get('uids').split(','):
+            for uid in config.GENSHINPY.get('uids').split('#'):
                 uids.append(int(uid))
 
         for account in accounts:
