@@ -501,7 +501,7 @@ async def job2genshinpy():
 
             details = []
             for expedition in notes.expeditions:
-                remaining_time = int(expedition.remaining_time)
+                remaining_time = (expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
                 expedition_data = {
                     'character_name': expedition.character.name,
                     'remaining_time_fmt': '{hour} h and {minute} min'.format(**minutes_to_hours(remaining_time / 60)) if remaining_time else ''
@@ -513,7 +513,7 @@ async def job2genshinpy():
                     expedition_data['status'] = 'Time remaining:'
                 details.append(expedition_fmt.format(**expedition_data))
 
-            until_resin_recovery = int(notes.until_resin_recovery)
+            until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
             data['until_resin_recovery_fmt'] = "({hour} h and {minute} min until fully replenished)".format(**minutes_to_hours(until_resin_recovery / 60)) if until_resin_recovery else ''
             data['expedition_details'] = '      '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
