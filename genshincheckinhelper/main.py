@@ -459,12 +459,12 @@ async def job2genshinpy():
 
         accounts = await client.genshin_accounts()
 
-        expedition_fmt = '└─ {character_name:<10} {status:^8} {remaining_time_fmt}\n'
+        expedition_fmt = '└─ {character_name:<10} ({remaining_time_fmt})\n'
         RESIN_TIMER_TEMPLATE = '''Real-Time Notes
     🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
-    Daily Commissions: {completed_commissions} / {max_commissions}
-    Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts}
+    Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
+    Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}
       {expedition_details}'''
 
@@ -493,28 +493,28 @@ async def job2genshinpy():
                 'max_resin': notes.max_resin,
                 'completed_commissions': notes.completed_commissions,
                 'max_commissions': notes.max_comissions,
+                'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
                 'remaining_resin_discounts': notes.remaining_resin_discounts,
                 'max_resin_discounts': notes.max_resin_discounts,
+                'resin_discounts_status': '(Not used up yet!)' if notes.remaining_resin_discounts > 0 else '',
                 'completed_expeditions': 0,
                 'max_expeditions': notes.max_expeditions
             }
 
             details = []
             for expedition in notes.expeditions:
-                remaining_time = (expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
+                remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
                 expedition_data = {
                     'character_name': expedition.character.name,
-                    'remaining_time_fmt': '{hour} h and {minute} min'.format(**minutes_to_hours(remaining_time / 60)) if remaining_time else ''
+                    'remaining_time_fmt': '{hour} h and {minute} min'.format(**minutes_to_hours(remaining_time / 60))
                 }
                 if expedition.finished:
-                    expedition_data['status'] = 'Completed'
+                    expedition_data['remaining_time_fmt'] += ' - Completed!'
                     data['completed_expeditions'] += 1
-                else:
-                    expedition_data['status'] = 'Time remaining:'
                 details.append(expedition_fmt.format(**expedition_data))
 
             until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
-            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min until fully replenished)".format(**minutes_to_hours(until_resin_recovery / 60)) if until_resin_recovery else ''
+            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60)) if until_resin_recovery else ''
             data['expedition_details'] = '      '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
             result.append(message)
@@ -522,7 +522,7 @@ async def job2genshinpy():
 
             is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
             content = f'```\n{message}```' if is_markdown else message
-            status = 'Push conditions are not met, monitor mode is running...'
+            status = 'Push conditions have not been met yet, continue monitoring...'
 
             count = 5
             IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
@@ -534,6 +534,7 @@ async def job2genshinpy():
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+            is_first_run = not bool(os.environ.get(RESIN_LAST_RECOVERY_TIME))
             os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
 
             is_full = notes.current_resin >= notes.max_resin
@@ -558,13 +559,16 @@ async def job2genshinpy():
                 status = 'Expedition completed!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+            elif is_first_run:
+                status = 'Real-Time Notes is being monitored!'
+                os.environ[IS_NOTIFY_STR] = 'True'
 
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if data['completed_expeditions'] > 0 else '0'
             os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
 
-            title = f'Genshin Checkin Helper is reminding you: {status}'
+            title = f'Genshin Impact Helper is reminding you: {status}'
             log.info(title)
             if os.environ[IS_NOTIFY_STR] == 'True':
                 notify_me(title, content)
@@ -576,7 +580,7 @@ def run_once():
             del os.environ[i]
 
     gh.set_lang(config.LANGUAGE)
-    job1()
+    #job1()
     if config.COOKIE_RESIN_TIMER:
         job2()
     if config.GENSHINPY.get('cookies'):
