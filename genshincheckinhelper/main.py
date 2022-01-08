@@ -6,6 +6,7 @@
 """
 
 from collections.abc import Iterable
+import enum
 from random import randint
 from time import sleep
 import datetime
@@ -26,7 +27,13 @@ finally:
     from genshinhelper.utils import log, get_cookies, nested_lookup, minutes_to_hours, MESSAGE_TEMPLATE, DAIRY_TEMPLATE, FINANCE_TEMPLATE
 from onepush import notify
 
-version = '1.0.3'
+import asyncio
+import genshin # thesadru/genshin.py
+
+import nest_asyncio
+nest_asyncio.apply()
+
+version = '1.0.3-genshin.py'
 banner = f'''
 +----------------------------------------------------------------+
 |               𒆙  Genshin Check-In Helper v{version}                |
@@ -185,6 +192,74 @@ def task8(cookie):
         result = r.get('msg')
     return result
 
+def taskgenshinpy(cookie):
+    async def task(cookie):
+        result = []
+
+        client = genshin.GenshinClient()
+        client.set_cookies(cookie)
+        accounts = await client.genshin_accounts()
+
+        MESSAGE_TEMPLATE = '''
+    {today:#^18}
+    🔅 {nickname} {server_name} Lv. {level}
+    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} days
+    Status: {status}
+    {addons}
+    {end:#^18}'''
+
+        DIARY_TEMPLATE = '''Traveler's Diary: {month}
+    💠 Primogems: {current_primogems}
+    🌕 Mora: {current_mora}'''
+
+        account = {}
+        if config.GENSHINPY.get('uids'):
+            first_uid = int(config.GENSHINPY.get('uids').split(',')[0])
+            for a in accounts:
+                if a.uid == first_uid:
+                    account = a
+
+        if not account:
+            log.info(f"Could not find account matching UID {first_uid}.")
+            return
+
+        data = {
+            'nickname': account.nickname,
+            'server_name': account.server_name,
+            'level': account.level,
+            'today': '',
+            'end': ''
+        }
+
+        try:
+            reward = await client.claim_daily_reward()
+        except genshin.AlreadyClaimed:
+            data['status'] = '👀 You have already checked-in'
+            claimed = await client.claimed_rewards(limit=1)
+            data['name'] = claimed[0].name
+            data['amount'] = claimed[0].amount
+        else:
+            data['status'] = 'OK'
+            data['name'] = reward.name
+            data['amount'] = reward.amount
+
+        reward_info = await client.get_reward_info()
+        data['claimed_rewards'] = reward_info.claimed_rewards
+
+        diary = await client.get_diary()
+        diary_data = {
+            'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+            'current_primogems': diary.data.current_primogems,
+            'current_mora': diary.data.current_mora
+        }
+        data['addons'] = DIARY_TEMPLATE.format(**diary_data)
+        message = MESSAGE_TEMPLATE.format(**data)
+
+        result.append(message)
+        return result
+    return asyncio.get_event_loop().run_until_complete(task(cookie))
+
 
 task_list = [{
     'name': 'HoYoLAB Community',
@@ -218,6 +293,10 @@ task_list = [{
     'name': '微信积分商城',
     'cookies': get_cookies(config.SHOPTOKEN),
     'function': task8
+}, {
+    'name': 'thesadru/genshin.py',
+    'cookies': get_cookies(config.GENSHINPY.get('cookies')),
+    'function': taskgenshinpy
 }]
 
 
@@ -255,7 +334,7 @@ def run_task(name, cookies, func):
         continue
 
     task_name_fmt = f'🏆 {name}'
-    status_fmt = f'☁️ ✔ {success_count} · ✖ {failure_count}'
+    status_fmt = f'☁️ ✅ {success_count} · ❎ {failure_count}'
     message_box = [success_count, failure_count, task_name_fmt, status_fmt, ''.join(result_list)]
     return message_box
 
@@ -277,7 +356,7 @@ def job1():
 
     log.info('RESULT:\n' + message_box)
     if message_box != tip:
-        title = f'Genshin Impact Helper ✔ {total_success_cnt} · ✖ {total_failure_cnt}'
+        title = f'Genshin Impact Helper ✅ {total_success_cnt} · ❎ {total_failure_cnt}'
         is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
         content = f'```\n{message_box}```' if is_markdown else message_box
         notify_me(title, content)
@@ -360,10 +439,10 @@ def job2():
                 status = '探索派遣完成啦!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
-            
+
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if 'Finished' in str(daily_note['expeditions']) else '0' 
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if 'Finished' in str(daily_note['expeditions']) else '0'
             os.environ[RESIN_LAST_RECOVERY_TIME] = str(resin_recovery_datetime.timestamp())
 
             title = f'原神签到小助手提醒您: {status}'
@@ -372,6 +451,123 @@ def job2():
                 notify_me(title, content)
     return result
 
+async def job2genshinpy():
+    result = []
+    for i in get_cookies(config.GENSHINPY.get('cookies')):
+        client = genshin.GenshinClient()
+        client.set_cookies(i)
+
+        accounts = await client.genshin_accounts()
+
+        expedition_fmt = '└─ {character_name:<10} {status:^8} {remaining_time_fmt}\n'
+        RESIN_TIMER_TEMPLATE = '''Real-Time Notes
+    🔅 {nickname} {server_name} Lv. {level}
+    Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
+    Daily Commissions: {completed_commissions} / {max_commissions}
+    Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts}
+    Expedition Limit: {completed_expeditions} / {max_expeditions}
+      {expedition_details}'''
+
+        uids = []
+        if (config.GENSHINPY.get('uids')):
+            for uid in config.GENSHINPY.get('uids').split(','):
+                uids.append(int(uid))
+
+        for account in accounts:
+            if len(uids) > 0 and account.uid not in uids:
+                log.info(f"Skipping Real-Time Notes for {account.nickname} {account.server_name}...")
+                continue
+
+            notes = await client.get_notes(account.uid)
+            if not notes:
+                log.info(f"Failed to fetch Real-Time Notes for {account.nickname} {account.server_name}, skipping...")
+                continue
+
+            log.info(f"Processing Real-Time Notes for {account.nickname} {account.server_name}...")
+
+            data = {
+                'nickname': account.nickname,
+                'server_name': account.server_name,
+                'level': account.level,
+                'current_resin': notes.current_resin,
+                'max_resin': notes.max_resin,
+                'completed_commissions': notes.completed_commissions,
+                'max_commissions': notes.max_comissions,
+                'remaining_resin_discounts': notes.remaining_resin_discounts,
+                'max_resin_discounts': notes.max_resin_discounts,
+                'completed_expeditions': 0,
+                'max_expeditions': notes.max_expeditions
+            }
+
+            details = []
+            for expedition in notes.expeditions:
+                remaining_time = int(expedition.remaining_time)
+                expedition_data = {
+                    'character_name': expedition.character.name,
+                    'remaining_time_fmt': '{hour} h and {minute} min'.format(**minutes_to_hours(remaining_time / 60)) if remaining_time else ''
+                }
+                if expedition.finished:
+                    expedition_data['status'] = 'Completed'
+                    data['completed_expeditions'] += 1
+                else:
+                    expedition_data['status'] = 'Time remaining:'
+                details.append(expedition_fmt.format(**expedition_data))
+
+            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min until fully replenished)".format(**minutes_to_hours(notes.until_resin_recovery / 60)) if notes.until_resin_recovery else ''
+            data['expedition_details'] = '      '.join(details)
+            message = RESIN_TIMER_TEMPLATE.format(**data)
+            result.append(message)
+            log.info(message)
+
+            is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
+            content = f'```\n{message}```' if is_markdown else message
+            status = 'Push conditions are not met, monitor mode is running...'
+
+            count = 5
+            IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
+            RESIN_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_NOTIFY_CNT"
+            RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT"
+            RESIN_LAST_RECOVERY_TIME = f"UID_{account.uid}_RESIN_LAST_RECOVERY_TIME"
+            EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
+            os.environ[IS_NOTIFY_STR] = 'False'
+            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
+            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+            os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
+
+            is_full = notes.current_resin >= notes.max_resin
+            is_threshold = notes.current_resin >= int(config.RESIN_THRESHOLD)
+            is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
+            is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
+            is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
+            is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
+
+            if is_full and is_resin_notify and not is_do_not_disturb:
+                status = 'Original resin are full!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
+            elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
+                status = 'Original resin are almost full!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+            elif is_resin_recovery_time_changed:
+                status = 'Original resin\'s recovery time has changed!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+            elif data['completed_expeditions'] > 0 and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+                status = 'Expedition completed!'
+                os.environ[IS_NOTIFY_STR] = 'True'
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+
+            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
+            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if data['completed_expeditions'] > 0 else '0'
+            os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
+
+            title = f'Genshin Checkin Helper is reminding you: {status}'
+            log.info(title)
+            if os.environ[IS_NOTIFY_STR] == 'True':
+                notify_me(title, content)
+    return result
 
 def run_once():
     for i in dict(os.environ):
@@ -382,19 +578,23 @@ def run_once():
     job1()
     if config.COOKIE_RESIN_TIMER:
         job2()
+    if config.GENSHINPY.get('cookies'):
+        return asyncio.get_event_loop().run_until_complete(job2genshinpy())
 
 
-def main():
+async def main():
     run_once()
     schedule.every().day.at(config.CHECK_IN_TIME).do(job1)
     if config.COOKIE_RESIN_TIMER:
         schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(job2)
+    if config.GENSHINPY.get('cookies'):
+        schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(job2genshinpy()))
 
     while True:
+        await asyncio.sleep(1)
         schedule.run_pending()
-        sleep(1)
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
 

@@ -1,3 +1,7 @@
 genshinhelper
 onepush
 schedule
+nest_asyncio
+genshin
+aiohttp
+pydantic

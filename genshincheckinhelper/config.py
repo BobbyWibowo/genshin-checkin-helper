@@ -15,6 +15,7 @@ CONFIG_DICT = {
     'CHECK_RESIN_SECS': 'CHECK_RESIN_SECS',
     'RESIN_THRESHOLD': 'RESIN_THRESHOLD',
     'RESIN_TIMER_DO_NOT_DISTURB': 'RESIN_TIMER_DO_NOT_DISTURB',
+    'GENSHINPY': 'GENSHINPY',
     'COOKIE_MIHOYOBBS': 'COOKIE_MIHOYOBBS',
     'COOKIE_RESIN_TIMER': 'COOKIE_RESIN_TIMER',
     'COOKIE_BH3': 'COOKIE_BH3',
@@ -68,7 +69,7 @@ class Config(object):
             if key == k and not value:
                 value = v
 
-        if key == 'ONEPUSH' and '{' in value:
+        if (key == 'ONEPUSH' or key == 'GENSHINPY') and '{' in value:
             value = json.loads(value)
         return value
 
