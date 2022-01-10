@@ -200,14 +200,12 @@ def taskgenshinpy(cookie):
         client.set_cookies(cookie)
         accounts = await client.genshin_accounts()
 
-        MESSAGE_TEMPLATE = '''
-    {today:#^18}
-    🔅 {nickname} {server_name} Lv. {level}
+        MESSAGE_TEMPLATE = '''📅 {today}
+🔅 {nickname} {server_name} Lv. {level}
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} days
     Status: {status}
-    {addons}
-    {end:#^18}'''
+    {addons}'''
 
         DIARY_TEMPLATE = '''Traveler's Diary: {month}
     💠 Primogems: {current_primogems}
@@ -224,12 +222,20 @@ def taskgenshinpy(cookie):
             log.info(f"Could not find account matching UID {first_uid}.")
             return
 
+        time_offset = {
+            'os_asia': 8,
+            'os_europe': 1,
+            'os_usa': -5
+        }
+        if time_offset[account.server]:
+            timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
+            today = datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')
+
         data = {
+            'today': today,
             'nickname': account.nickname,
             'server_name': account.server_name,
-            'level': account.level,
-            'today': '',
-            'end': ''
+            'level': account.level
         }
 
         try:
@@ -329,13 +335,13 @@ def run_task(name, cookies, func):
             failure_count += 1
         finally:
             result_str = "".join(raw_result) if isinstance(raw_result, Iterable) else raw_result
-            result_fmt = f'🌈 No.{i}:\n    {result_str}\n'
+            result_fmt = f'🌈 No.{i}:\n{result_str}\n'
             result_list.append(result_fmt)
         continue
 
     task_name_fmt = f'🏆 {name}'
-    status_fmt = f'☁️ ✅ {success_count} · ❎ {failure_count}'
-    message_box = [success_count, failure_count, task_name_fmt, status_fmt, ''.join(result_list)]
+    #status_fmt = f'☁️ ✅ {success_count} · ❎ {failure_count}'
+    message_box = [success_count, failure_count, task_name_fmt, ''.join(result_list)]
     return message_box
 
 
@@ -459,10 +465,13 @@ async def job2genshinpy():
 
         accounts = await client.genshin_accounts()
 
-        expedition_fmt = '└─ {character_name:<10} ({remaining_time_fmt})\n'
-        RESIN_TIMER_TEMPLATE = '''Real-Time Notes
-    🔅 {nickname} {server_name} Lv. {level}
+        expedition_fmt = '└─ {character_name:<10} {expedition_status}'
+        RESIN_TIMER_TEMPLATE = '''🏆 thesadru/genshin.py
+☁️ Real-Time Notes
+📅 {today}
+🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
+      └─ {until_resin_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}
@@ -485,7 +494,18 @@ async def job2genshinpy():
 
             log.info(f"Processing Real-Time Notes for {account.nickname} {account.server_name}...")
 
+            time_offset = {
+                'os_asia': 8,
+                'os_europe': 1,
+                'os_usa': -5
+            }
+            today = ''
+            if time_offset[account.server]:
+                timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
+                today = datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')
+
             data = {
+                'today': today,
                 'nickname': account.nickname,
                 'server_name': account.server_name,
                 'level': account.level,
@@ -503,19 +523,19 @@ async def job2genshinpy():
 
             details = []
             for expedition in notes.expeditions:
-                remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
-                expedition_data = {
-                    'character_name': expedition.character.name,
-                    'remaining_time_fmt': '{hour} h and {minute} min'.format(**minutes_to_hours(remaining_time / 60))
-                }
+                expedition_data = { 'character_name': expedition.character.name }
                 if expedition.finished:
-                    expedition_data['remaining_time_fmt'] += ' - Completed!'
+                    expedition_data['expedition_status'] = 'Completed!'
                     data['completed_expeditions'] += 1
+                else:
+                    remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                    expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
                 details.append(expedition_fmt.format(**expedition_data))
 
             until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
-            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60)) if until_resin_recovery else ''
-            data['expedition_details'] = '      '.join(details)
+            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60)) if notes.resin_recovered_at else ''
+            data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M:%S %p')}" if notes.resin_recovered_at else 'Full! Don\'t forget to use them!'
+            data['expedition_details'] = '\n      '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
             result.append(message)
             log.info(message)
@@ -568,7 +588,7 @@ async def job2genshinpy():
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if data['completed_expeditions'] > 0 else '0'
             os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
 
-            title = f'Genshin Impact Helper is reminding you: {status}'
+            title = status
             log.info(title)
             if os.environ[IS_NOTIFY_STR] == 'True':
                 notify_me(title, content)
@@ -584,7 +604,7 @@ def run_once():
     if config.COOKIE_RESIN_TIMER:
         job2()
     if config.GENSHINPY.get('cookies'):
-        return asyncio.get_event_loop().run_until_complete(job2genshinpy())
+        asyncio.get_event_loop().run_until_complete(job2genshinpy())
 
 
 async def main():
