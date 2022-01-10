@@ -600,11 +600,11 @@ def run_once():
             del os.environ[i]
 
     gh.set_lang(config.LANGUAGE)
-    job1()
     if config.COOKIE_RESIN_TIMER:
         job2()
     if config.GENSHINPY.get('cookies'):
         asyncio.get_event_loop().run_until_complete(job2genshinpy())
+    job1()
 
 
 async def main():
