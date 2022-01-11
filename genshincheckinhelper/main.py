@@ -238,7 +238,7 @@ def taskgenshinpy(cookie):
         timezone, utc_offset_str = assert_timezone(account.server)
 
         data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}" if timezone else '',
+            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
             'nickname': account.nickname,
             'server_name': account.server_name,
             'level': account.level
@@ -504,7 +504,7 @@ async def job2genshinpy():
             timezone, utc_offset_str = assert_timezone(account.server)
 
             data = {
-                'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}" if timezone else '',
+                'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
                 'nickname': account.nickname,
                 'server_name': account.server_name,
                 'level': account.level,
@@ -535,9 +535,9 @@ async def job2genshinpy():
                 until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                 data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
                 if timezone:
-                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
+                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                 else:
-                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M:%S %p')}"
+                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
             else:
                 data['until_resin_recovery_fmt'] = ''
                 data['until_resin_recovery_date_fmt'] = 'Full! Don\'t forget to use them!'
