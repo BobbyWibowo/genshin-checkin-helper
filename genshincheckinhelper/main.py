@@ -264,6 +264,7 @@ def taskgenshinpy(cookie):
         message = MESSAGE_TEMPLATE.format(**data)
 
         result.append(message)
+        await client.close()
         return result
     return asyncio.get_event_loop().run_until_complete(task(cookie))
 
@@ -600,6 +601,7 @@ async def job2genshinpy():
             log.info(title)
             if os.environ[IS_NOTIFY_STR] == 'True':
                 notify_me(title, content)
+        await client.close()
     return result
 
 def run_once():
