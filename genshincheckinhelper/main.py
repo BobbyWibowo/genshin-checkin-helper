@@ -478,11 +478,11 @@ async def job2genshinpy():
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
-      └─ {until_resin_recovery_date_fmt}
+     └─ {until_resin_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}
-      {expedition_details}'''
+     {expedition_details}'''
 
         uids = []
         if (config.GENSHINPY.get('uids')):
@@ -521,6 +521,7 @@ async def job2genshinpy():
             }
 
             details = []
+            earliest_expedition = False
             for expedition in notes.expeditions:
                 expedition_data = { 'character_name': expedition.character.name }
                 if expedition.finished:
@@ -529,7 +530,15 @@ async def job2genshinpy():
                 else:
                     remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
                     expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
+                    if not earliest_expedition or expedition.completed_at < earliest_expedition:
+                        earliest_expedition = expedition.completed_at
                 details.append(expedition_fmt.format(**expedition_data))
+
+            if earliest_expedition:
+                if timezone:
+                    details.append(f"└─ Earliest at {earliest_expedition.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}")
+                else:
+                    details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
             if isinstance(notes.resin_recovered_at, datetime.datetime):
                 until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
@@ -540,9 +549,9 @@ async def job2genshinpy():
                     data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
             else:
                 data['until_resin_recovery_fmt'] = ''
-                data['until_resin_recovery_date_fmt'] = 'Full! Don\'t forget to use them!'
+                data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
-            data['expedition_details'] = '\n      '.join(details)
+            data['expedition_details'] = '\n     '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
             result.append(message)
             log.info(message)
