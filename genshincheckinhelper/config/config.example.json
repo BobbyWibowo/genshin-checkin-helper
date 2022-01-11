@@ -8,7 +8,8 @@
   "RESIN_TIMER_DO_NOT_DISTURB": "23:00-07:00",
   "GENSHINPY": {
     "cookies": "",
-    "uids": ""
+    "uids": "",
+    "utc_offset": false
   },
   "COOKIE_MIHOYOBBS": "",
   "COOKIE_RESIN_TIMER": "",

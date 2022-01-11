@@ -74,6 +74,19 @@ def notify_me(title, content):
     return notify(notifier, title=title, content=content, **params)
 
 
+def assert_timezone(server):
+    server_utc_offset = {
+        'os_asia': 8,
+        'os_europe': 1,
+        'os_usa': -5
+    }
+    display_utc_offset = config.GENSHINPY.get('utc_offset') if isinstance(config.GENSHINPY.get('utc_offset'), int) else server_utc_offset[server]
+    if isinstance(display_utc_offset, int):
+        timezone = datetime.timezone(datetime.timedelta(hours=display_utc_offset))
+        utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else '-'}{display_utc_offset}"
+        return timezone, utc_offset_str
+
+
 def task_common(r, d, text_temp1, text_temp2):
     result = []
     for i in range(len(r)):
@@ -222,18 +235,10 @@ def taskgenshinpy(cookie):
             log.info(f"Could not find account matching UID {first_uid}.")
             return
 
-        time_offset = {
-            'os_asia': 8,
-            'os_europe': 1,
-            'os_usa': -5
-        }
-        if time_offset[account.server]:
-            timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
-            utc_offset_str = f"UTC{'+' if time_offset[account.server] >= 0 else '-'}{time_offset[account.server]}"
-            today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
+        timezone, utc_offset_str = assert_timezone(account.server)
 
         data = {
-            'today': today,
+            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}" if timezone else '',
             'nickname': account.nickname,
             'server_name': account.server_name,
             'level': account.level
@@ -496,19 +501,10 @@ async def job2genshinpy():
 
             log.info(f"Processing Real-Time Notes for {account.nickname} {account.server_name}...")
 
-            time_offset = {
-                'os_asia': 8,
-                'os_europe': 1,
-                'os_usa': -5
-            }
-            today = ''
-            if time_offset[account.server]:
-                timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
-                utc_offset_str = f"UTC{'+' if time_offset[account.server] >= 0 else '-'}{time_offset[account.server]}"
-                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
+            timezone, utc_offset_str = assert_timezone(account.server)
 
             data = {
-                'today': today,
+                'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}" if timezone else '',
                 'nickname': account.nickname,
                 'server_name': account.server_name,
                 'level': account.level,
@@ -536,10 +532,12 @@ async def job2genshinpy():
                 details.append(expedition_fmt.format(**expedition_data))
 
             if isinstance(notes.resin_recovered_at, datetime.datetime):
-                resin_recovered_at_no_tz = notes.resin_recovered_at.replace(tzinfo=None)
-                until_resin_recovery = (resin_recovered_at_no_tz - datetime.datetime.now()).total_seconds()
+                until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                 data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
-                data['until_resin_recovery_date_fmt'] = f"Full at {resin_recovered_at_no_tz.strftime('%Y-%m-%d %I:%M:%S %p')}"
+                if timezone:
+                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
+                else:
+                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M:%S %p')}"
             else:
                 data['until_resin_recovery_fmt'] = ''
                 data['until_resin_recovery_date_fmt'] = 'Full! Don\'t forget to use them!'
