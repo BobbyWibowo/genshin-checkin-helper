@@ -532,9 +532,15 @@ async def job2genshinpy():
                     expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
                 details.append(expedition_fmt.format(**expedition_data))
 
-            until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds()
-            data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60)) if notes.resin_recovered_at else ''
-            data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M:%S %p')}" if notes.resin_recovered_at else 'Full! Don\'t forget to use them!'
+            if isinstance(notes.resin_recovered_at, datetime.datetime):
+                resin_recovered_at_no_tz = notes.resin_recovered_at.replace(tzinfo=None)
+                until_resin_recovery = (resin_recovered_at_no_tz - datetime.datetime.now()).total_seconds()
+                data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
+                data['until_resin_recovery_date_fmt'] = f"Full at {resin_recovered_at_no_tz.strftime('%Y-%m-%d %I:%M:%S %p')}"
+            else:
+                data['until_resin_recovery_fmt'] = ''
+                data['until_resin_recovery_date_fmt'] = 'Full! Don\'t forget to use them!'
+
             data['expedition_details'] = '\n      '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
             result.append(message)
