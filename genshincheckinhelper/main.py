@@ -229,7 +229,8 @@ def taskgenshinpy(cookie):
         }
         if time_offset[account.server]:
             timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
-            today = datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')
+            utc_offset_str = f"UTC{'+' if time_offset[account.server] >= 0 else '-'}{time_offset[account.server]}"
+            today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
 
         data = {
             'today': today,
@@ -502,7 +503,8 @@ async def job2genshinpy():
             today = ''
             if time_offset[account.server]:
                 timezone = datetime.timezone(datetime.timedelta(hours=time_offset[account.server]))
-                today = datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')
+                utc_offset_str = f"UTC{'+' if time_offset[account.server] >= 0 else '-'}{time_offset[account.server]}"
+                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M:%S %p')} {utc_offset_str}"
 
             data = {
                 'today': today,
