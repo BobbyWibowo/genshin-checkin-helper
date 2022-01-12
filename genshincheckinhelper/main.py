@@ -525,7 +525,7 @@ async def job2genshinpy():
             for expedition in notes.expeditions:
                 expedition_data = { 'character_name': expedition.character.name }
                 if expedition.finished:
-                    expedition_data['expedition_status'] = 'Completed!'
+                    expedition_data['expedition_status'] = 'Expedition completed!'
                     data['completed_expeditions'] += 1
                 else:
                     remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
@@ -585,11 +585,11 @@ async def job2genshinpy():
                 status = f'Original Resin are full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
-                status = 'Original resin are almost full!'
+                status = 'Original Resin are almost full!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
             elif is_resin_recovery_time_changed:
-                status = 'Original resin\'s recovery time has changed!'
+                status = 'Original Resin\'s recovery time has changed!'
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif data['completed_expeditions'] > 0 and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
