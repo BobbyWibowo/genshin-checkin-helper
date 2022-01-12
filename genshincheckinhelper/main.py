@@ -581,9 +581,9 @@ async def job2genshinpy():
             is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
 
             if is_full and is_resin_notify and not is_do_not_disturb:
-                status = 'Original resin are full!'
-                os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
+                status = f'Original Resin are full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
+                os.environ[IS_NOTIFY_STR] = 'True'
             elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
                 status = 'Original resin are almost full!'
                 os.environ[IS_NOTIFY_STR] = 'True'
@@ -592,9 +592,9 @@ async def job2genshinpy():
                 status = 'Original resin\'s recovery time has changed!'
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif data['completed_expeditions'] > 0 and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
-                status = 'Expedition completed!'
-                os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+                status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
+                os.environ[IS_NOTIFY_STR] = 'True'
             elif is_first_run:
                 status = 'Real-Time Notes is being monitored!'
                 os.environ[IS_NOTIFY_STR] = 'True'
