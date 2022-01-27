@@ -611,6 +611,16 @@ async def job2genshinpy():
         await client.close()
     return result
 
+
+async def trycatchjob2():
+    try:
+        result = await job2genshinpy()
+    except:
+        return False
+    else:
+        return result
+
+
 def run_once():
     for i in dict(os.environ):
         if 'UID_' in i:
@@ -620,7 +630,7 @@ def run_once():
     if config.COOKIE_RESIN_TIMER:
         job2()
     if config.GENSHINPY.get('cookies'):
-        asyncio.get_event_loop().run_until_complete(job2genshinpy())
+        asyncio.get_event_loop().run_until_complete(trycatchjob2())
     job1()
 
 
@@ -632,12 +642,12 @@ async def main():
         if config.COOKIE_RESIN_TIMER:
             schedule.every(int(t1)).to(int(t2)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(job2genshinpy()))
+            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(trycatchjob2()))
     else:
         if config.COOKIE_RESIN_TIMER:
             schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
-            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(job2genshinpy()))
+            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(trycatchjob2()))
 
     while True:
         await asyncio.sleep(1)
