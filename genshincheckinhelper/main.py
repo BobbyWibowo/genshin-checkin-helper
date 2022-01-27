@@ -479,6 +479,8 @@ async def job2genshinpy():
 🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
      └─ {until_resin_recovery_date_fmt}
+    Realm Currency: {current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
+     └─ {until_realm_currency_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}
@@ -510,6 +512,8 @@ async def job2genshinpy():
                 'level': account.level,
                 'current_resin': notes.current_resin,
                 'max_resin': notes.max_resin,
+                'current_realm_currency': notes.current_realm_currency,
+                'max_realm_currency': notes.max_realm_currency,
                 'completed_commissions': notes.completed_commissions,
                 'max_commissions': notes.max_comissions,
                 'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
@@ -550,6 +554,17 @@ async def job2genshinpy():
             else:
                 data['until_resin_recovery_fmt'] = ''
                 data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
+
+            if isinstance(notes.realm_currency_recovered_at, datetime.datetime):
+                until_realm_currency_recovery = (notes.realm_currency_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
+                if timezone:
+                    data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                else:
+                    data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
+            else:
+                data['until_realm_currency_recovery_fmt'] = ''
+                data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
             data['expedition_details'] = '\n     '.join(details)
             message = RESIN_TIMER_TEMPLATE.format(**data)
