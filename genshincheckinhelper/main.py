@@ -512,8 +512,10 @@ async def job2genshinpy():
                 'level': account.level,
                 'current_resin': notes.current_resin,
                 'max_resin': notes.max_resin,
+                'until_resin_recovery_fmt': '',
                 'current_realm_currency': notes.current_realm_currency,
                 'max_realm_currency': notes.max_realm_currency,
+                'until_realm_currency_recovery_fmt': '',
                 'completed_commissions': notes.completed_commissions,
                 'max_commissions': notes.max_comissions,
                 'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
@@ -544,7 +546,8 @@ async def job2genshinpy():
                 else:
                     details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
-            if isinstance(notes.resin_recovered_at, datetime.datetime):
+            is_resin_recovered_at_datetime = isinstance(notes.resin_recovered_at, datetime.datetime)
+            if is_resin_recovered_at_datetime:
                 until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                 data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
                 if timezone:
@@ -552,10 +555,13 @@ async def job2genshinpy():
                 else:
                     data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
             else:
-                data['until_resin_recovery_fmt'] = ''
                 data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
-            if isinstance(notes.realm_currency_recovered_at, datetime.datetime):
+            do_realm_currency = bool(notes.max_realm_currency)
+            is_realm_currency_recovered_at_datetime = isinstance(notes.realm_currency_recovered_at, datetime.datetime)
+            if not do_realm_currency:
+                data['until_realm_currency_recovery_date_fmt'] = 'Not available or failed to load!'
+            elif is_realm_currency_recovered_at_datetime:
                 until_realm_currency_recovery = (notes.realm_currency_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                 data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
                 if timezone:
@@ -563,7 +569,6 @@ async def job2genshinpy():
                 else:
                     data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
             else:
-                data['until_realm_currency_recovery_fmt'] = ''
                 data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
             data['expedition_details'] = '\n     '.join(details)
@@ -584,31 +589,42 @@ async def job2genshinpy():
             REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
             REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
             EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
+
+            is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
             os.environ[IS_NOTIFY_STR] = 'False'
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
-            is_first_run = not bool(os.environ.get(RESIN_LAST_RECOVERY_TIME))
-            os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
-            os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
-            os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
-            os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovered_at.timestamp())
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
 
             is_full = notes.current_resin >= notes.max_resin
             is_threshold = notes.current_resin >= int(config.RESIN_THRESHOLD)
             is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
             is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
-            is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-            realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold'))
-            if realm_currency_threshold >= 0:
-                is_realm_currency_threshold = notes.current_realm_currency >= realm_currency_threshold
-            elif realm_currency_threshold < 0:
-                is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
-            is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
-            is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
+            is_resin_recovery_time_changed = False
+            if is_resin_recovered_at_datetime:
+                os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
+                is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
+
+            is_realm_currency_full = is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
+            if do_realm_currency:
+                os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
+                os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
+                is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
+                try:
+                    realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold'))
+                    if realm_currency_threshold < 0:
+                        is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
+                    else:
+                        is_realm_currency_threshold = notes.current_realm_currency >= realm_currency_threshold
+                except:
+                    pass
+                is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
+                is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
+                if is_realm_currency_recovered_at_datetime:
+                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovered_at.timestamp())
+                    is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovered_at.timestamp()) > 400
+
             is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
-            is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
-            is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovered_at.timestamp()) > 400
 
             if is_full and is_resin_notify and not is_do_not_disturb:
                 os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
@@ -642,11 +658,15 @@ async def job2genshinpy():
 
             os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-            os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
-            os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
-            os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
-            os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovered_at.timestamp())
+            if is_resin_recovered_at_datetime:
+                os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
             os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if data['completed_expeditions'] > 0 else '0'
+
+            if do_realm_currency:
+                os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
+                os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
+                if is_realm_currency_recovered_at_datetime:
+                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovered_at.timestamp())
 
             title = status
             log.info(title)
