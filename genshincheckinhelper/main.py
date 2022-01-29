@@ -604,6 +604,7 @@ async def job2genshinpy():
             if is_resin_recovered_at_datetime:
                 os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
                 is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
+            is_expedition_completed = data['completed_expeditions'] > 0
 
             is_realm_currency_full = is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
             if do_realm_currency:
@@ -628,10 +629,10 @@ async def job2genshinpy():
 
             if is_full and is_resin_notify and not is_do_not_disturb:
                 os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
-                status = f'Original Resin are full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
+                status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
-                status = 'Original Resin are almost full!'
+                status = 'Original Resin is almost full!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
             elif is_resin_recovery_time_changed:
@@ -639,16 +640,16 @@ async def job2genshinpy():
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif is_realm_currency_full and is_realm_currency_notify and not is_do_not_disturb:
                 os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) + 1)
-                status = f'Realm Currency are full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
+                status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
                 os.environ[IS_NOTIFY_STR] = 'True'
             elif is_realm_currency_threshold and is_realm_currency_threshold_notify and not is_do_not_disturb:
-                status = 'Realm Currency are almost full!'
+                status = 'Realm Currency is almost full!'
                 os.environ[IS_NOTIFY_STR] = 'True'
                 os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
             elif is_realm_currency_recovery_time_changed:
                 status = 'Realm Currency\'s recovery time has changed!'
                 os.environ[IS_NOTIFY_STR] = 'True'
-            elif data['completed_expeditions'] > 0 and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+            elif is_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                 status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
                 os.environ[IS_NOTIFY_STR] = 'True'
@@ -660,7 +661,7 @@ async def job2genshinpy():
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
             if is_resin_recovered_at_datetime:
                 os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
-            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if data['completed_expeditions'] > 0 else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_expedition_completed else '0'
 
             if do_realm_currency:
                 os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
