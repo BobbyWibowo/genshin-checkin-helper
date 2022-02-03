@@ -8,7 +8,7 @@ genshinhelper = "*"
 onepush = "*"
 schedule = "*"
 nest-asyncio = "*"
-genshin = {editable = true, ref = "15431717ef24d75b1802312f5eab2ae0895c7ab7", git = "https://github.com/thesadru/genshin.py.git"}
+genshin = {editable = true, ref = "0.4", git = "https://github.com/thesadru/genshin.py"}
 aiohttp = "*"
 pydantic = "*"
 

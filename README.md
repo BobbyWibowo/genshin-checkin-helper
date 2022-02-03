@@ -9,6 +9,6 @@ Said library has better support for Global/HoYoLAB APIs (such as Real-Times Note
 
 ## Disclaimer
 
-I'm not a frequent Python programmer, so brace yourself for various imperfect coding standards.
+I'm not a frequent Python programmer, so brace yourself for various imperfect or straight-up-weird coding standards.
 
 The reason why I decided to fork y1ndan/genshin-checkin-helper instead of writing my own from scratch is mainly due to my lack of experience with Python. Otherwise it would have been better to write something that revolved around genshin.py library itself, instead of having genshin.py as an "alternative" as it is now.
