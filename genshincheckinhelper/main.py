@@ -582,7 +582,7 @@ async def job2genshinpy():
             content = f'```\n{message}```' if is_markdown else message
             status = 'Push conditions have not been met yet, continue monitoring...'
 
-            count = 3
+            count = 5
             IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
             RESIN_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_NOTIFY_CNT"
             RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT"
@@ -605,7 +605,7 @@ async def job2genshinpy():
             if is_resin_recovered_at_datetime:
                 os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
                 is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
-            is_expedition_completed = data['completed_expeditions'] > 0
+            is_any_expedition_completed = data['completed_expeditions'] > 0
 
             is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
             if do_realm_currency:
@@ -649,7 +649,7 @@ async def job2genshinpy():
             elif is_realm_currency_recovery_time_changed:
                 status = 'Realm Currency\'s recovery time has changed!'
                 os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+            elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                 status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
                 os.environ[IS_NOTIFY_STR] = 'True'
@@ -661,7 +661,7 @@ async def job2genshinpy():
             os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
             if is_resin_recovered_at_datetime:
                 os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
-            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_expedition_completed else '0'
+            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
 
             if do_realm_currency:
                 os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
