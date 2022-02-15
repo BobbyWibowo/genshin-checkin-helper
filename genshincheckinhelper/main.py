@@ -233,9 +233,9 @@ def taskgenshinpy(cookie):
             for a in accounts:
                 if a.uid == first_uid:
                     account = a
-        if not account:
-            log.info(f"Could not find account matching UID {first_uid}.")
-            return
+            if not account:
+                log.info(f"Could not find account matching UID {first_uid}.")
+                return
         else:
             account = accounts[0]
 
@@ -487,8 +487,7 @@ async def job2genshinpy():
      └─ {until_realm_currency_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
-    Expedition Limit: {completed_expeditions} / {max_expeditions}
-     {expedition_details}'''
+    Expedition Limit: {completed_expeditions} / {max_expeditions}'''
 
         uids = []
         if (config.GENSHINPY.get('uids')):
@@ -578,7 +577,10 @@ async def job2genshinpy():
                 data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
             data['expedition_details'] = '\n     '.join(details)
+
             message = RESIN_TIMER_TEMPLATE.format(**data)
+            if len(details) > 0:
+                message += '\n     '.join([''] + details)
             result.append(message)
             log.info(message)
 
