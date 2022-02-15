@@ -77,7 +77,7 @@ def notify_me(title, content):
 def assert_timezone(server):
     server_utc_offset = {
         'os_asia': 8,
-        'os_europe': 1,
+        'os_euro': 1,
         'os_usa': -5
     }
     display_utc_offset = config.GENSHINPY.get('utc_offset') if type(config.GENSHINPY.get('utc_offset')) == int else server_utc_offset[server]
