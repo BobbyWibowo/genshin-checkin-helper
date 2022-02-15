@@ -212,6 +212,9 @@ def taskgenshinpy(cookie):
         client = genshin.GenshinClient()
         client.set_cookies(cookie)
         accounts = await client.genshin_accounts()
+        if len(accounts) < 1:
+            log.info("Are there no Genshin accounts in this HoYoLab account?")
+            return
 
         MESSAGE_TEMPLATE = '''📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
@@ -230,10 +233,11 @@ def taskgenshinpy(cookie):
             for a in accounts:
                 if a.uid == first_uid:
                     account = a
-
         if not account:
             log.info(f"Could not find account matching UID {first_uid}.")
             return
+        else:
+            account = accounts[0]
 
         timezone, utc_offset_str = assert_timezone(account.server)
 
