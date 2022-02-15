@@ -86,7 +86,7 @@ def assert_timezone(server):
     display_utc_offset = config.GENSHINPY.get('utc_offset') if type(config.GENSHINPY.get('utc_offset')) == int else server_utc_offset[server]
     if type(display_utc_offset) == int:
         timezone = datetime.timezone(datetime.timedelta(hours=display_utc_offset))
-        utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else '-'}{display_utc_offset}"
+        utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else ''}{display_utc_offset}"
         return timezone, utc_offset_str
 
 
