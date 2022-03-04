@@ -30,6 +30,11 @@ from onepush import notify
 import asyncio
 import genshin # thesadru/genshin.py
 
+# NOTE: Temporary solution until Honkai is fully supported by genshin.py library
+class HonkaiClient(genshin.GenshinClient):
+    ACT_ID = "e202110291205111"
+    REWARD_URL = "https://api-os-takumi.mihoyo.com/event/mani/"
+
 import nest_asyncio
 nest_asyncio.apply()
 
@@ -280,6 +285,42 @@ def taskgenshinpy(cookie):
         return result
     return asyncio.get_event_loop().run_until_complete(task(cookie))
 
+def taskgenshinpyhonkai(cookie):
+    async def task(cookie):
+        result = []
+
+        client = HonkaiClient()
+        client.set_cookies(cookie)
+        MESSAGE_TEMPLATE = '''📅 {today}
+🔅 Honkai Impact 3rd
+    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} days
+    Status: {status}'''
+
+        data = {
+            'today': f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %I:%M %p')} UTC+0"
+        }
+
+        try:
+            reward = await client.claim_daily_reward()
+        except genshin.AlreadyClaimed:
+            data['status'] = '👀 You have already checked-in'
+            claimed = await client.claimed_rewards(limit=1)
+            data['name'] = claimed[0].name
+            data['amount'] = claimed[0].amount
+        else:
+            data['status'] = 'OK'
+            data['name'] = reward.name
+            data['amount'] = reward.amount
+
+        reward_info = await client.get_reward_info()
+        data['claimed_rewards'] = reward_info.claimed_rewards
+        message = MESSAGE_TEMPLATE.format(**data)
+
+        result.append(message)
+        await client.close()
+        return result
+    return asyncio.get_event_loop().run_until_complete(task(cookie))
 
 task_list = [{
     'name': 'HoYoLAB Community',
@@ -317,6 +358,10 @@ task_list = [{
     'name': 'thesadru/genshin.py',
     'cookies': get_cookies(config.GENSHINPY.get('cookies')),
     'function': taskgenshinpy
+}, {
+    'name': 'thesadru/genshin.py-honkai',
+    'cookies': get_cookies(config.GENSHINPY.get('honkai_cookies')),
+    'function': taskgenshinpyhonkai
 }]
 
 
