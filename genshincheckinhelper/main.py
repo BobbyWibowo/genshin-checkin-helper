@@ -305,13 +305,14 @@ def taskgenshinpyhonkai(cookie):
             reward = await client.claim_daily_reward()
         except genshin.AlreadyClaimed:
             data['status'] = '👀 You have already checked-in'
-            claimed = await client.claimed_rewards(limit=1)
-            data['name'] = claimed[0].name
-            data['amount'] = claimed[0].amount
         else:
             data['status'] = 'OK'
-            data['name'] = reward.name
-            data['amount'] = reward.amount
+
+        # NOTE: Always re-fetch claimed rewards data
+        # since data returned by HonkaiClient.claim_daily_rewards() is not reliable
+        claimed = await client.claimed_rewards(limit=1)
+        data['name'] = claimed[0].name
+        data['amount'] = claimed[0].amount
 
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
