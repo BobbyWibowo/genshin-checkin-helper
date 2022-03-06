@@ -227,7 +227,7 @@ def taskgenshinpy(cookie):
         MESSAGE_TEMPLATE = '''📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} days
+    Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}
     {addons}'''
 
@@ -294,7 +294,7 @@ def taskgenshinpyhonkai(cookie):
         MESSAGE_TEMPLATE = '''📅 {today}
 🔅 Honkai Impact 3rd
     Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} days
+    Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
         data = {
