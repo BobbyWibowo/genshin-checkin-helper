@@ -6,7 +6,6 @@
 """
 
 from collections.abc import Iterable
-import enum
 from inspect import iscoroutinefunction
 from random import randint
 from time import sleep
