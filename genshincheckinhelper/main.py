@@ -273,7 +273,7 @@ async def taskgenshinpy(cookie):
         data['amount'] = claimed[0].amount
     else:
         data['status'] = 'OK'
-        data['addons'] = 'Olah! Odomu'
+        data['addons'] = 'Olah! Odomu\n    ' # extra whitespaces for formatting with traveler's diary
         data['name'] = reward.name
         data['amount'] = reward.amount
 
