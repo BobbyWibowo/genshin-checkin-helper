@@ -7,7 +7,7 @@
 
 from collections.abc import Iterable
 import enum
-import inspect
+from inspect import iscoroutinefunction
 from random import randint
 from time import sleep
 import datetime
@@ -400,7 +400,7 @@ async def run_task(name, cookies, func):
         log.info('Preparing to perform task for account {i}...'.format(i=i))
         raw_result = ''
         try:
-            if inspect.iscoroutinefunction(func):
+            if iscoroutinefunction(func):
                 raw_result = await func(cookie)
             else:
                 raw_result = func(cookie)
