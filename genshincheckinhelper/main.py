@@ -7,6 +7,7 @@
 
 from collections.abc import Iterable
 import enum
+import inspect
 from random import randint
 from time import sleep
 import datetime
@@ -79,7 +80,8 @@ def notify_me(title, content):
     return notify(notifier, title=title, content=content, **params)
 
 
-def assert_timezone(server):
+def assert_timezone(server=None):
+    display_utc_offset = 0
     server_utc_offset = {
         'cn_gf01': 8,
         'cn_qd01': 8,
@@ -88,11 +90,15 @@ def assert_timezone(server):
         'os_asia': 8,
         'os_cht': 8
     }
-    display_utc_offset = config.GENSHINPY.get('utc_offset') if type(config.GENSHINPY.get('utc_offset')) == int else server_utc_offset[server]
-    if type(display_utc_offset) == int:
-        timezone = datetime.timezone(datetime.timedelta(hours=display_utc_offset))
-        utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else ''}{display_utc_offset}"
-        return timezone, utc_offset_str
+
+    if type(config.GENSHINPY.get('utc_offset')) == int:
+        display_utc_offset = config.GENSHINPY.get('utc_offset')
+    elif type(server) == str and server_utc_offset[server]:
+        display_utc_offset = server_utc_offset[server]
+
+    timezone = datetime.timezone(datetime.timedelta(hours=display_utc_offset))
+    utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else ''}{display_utc_offset}"
+    return timezone, utc_offset_str
 
 
 def task_common(r, d, text_temp1, text_temp2):
@@ -213,115 +219,122 @@ def task8(cookie):
         result = r.get('msg')
     return result
 
-def taskgenshinpy(cookie):
-    async def task(cookie):
-        result = []
+async def taskgenshinpy(cookie):
+    result = []
 
-        client = genshin.GenshinClient()
-        client.set_cookies(cookie)
-        accounts = await client.genshin_accounts()
-        if len(accounts) < 1:
-            log.info("Are there no Genshin accounts in this HoYoLab account?")
-            return
+    client = genshin.GenshinClient()
+    client.set_cookies(cookie)
+    log.info('Preparing to get user game roles information...')
+    accounts = await client.genshin_accounts()
+    if len(accounts) < 1:
+        log.info("Are there no Genshin accounts in this HoYoLab account?")
+        return
 
-        MESSAGE_TEMPLATE = '''📅 {today}
+    MESSAGE_TEMPLATE = '''📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}
     {addons}'''
 
-        DIARY_TEMPLATE = '''Traveler's Diary: {month}
+    DIARY_TEMPLATE = '''Traveler's Diary: {month}
     💠 Primogems: {current_primogems}
     🌕 Mora: {current_mora}'''
 
-        account = {}
-        if config.GENSHINPY.get('uids'):
-            first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
-            for a in accounts:
-                if a.uid == first_uid:
-                    account = a
-            if not account:
-                log.info(f"Could not find account matching UID {first_uid}.")
-                return
-        else:
-            account = accounts[0]
+    account = {}
+    if config.GENSHINPY.get('uids'):
+        first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
+        for a in accounts:
+            if a.uid == first_uid:
+                account = a
+        if not account:
+            log.info(f"Could not find account matching UID {first_uid}.")
+            return
+    else:
+        account = accounts[0]
 
-        timezone, utc_offset_str = assert_timezone(account.server)
+    timezone, utc_offset_str = assert_timezone(account.server)
 
-        data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-            'nickname': account.nickname,
-            'server_name': account.server_name,
-            'level': account.level
-        }
+    data = {
+        'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+        'nickname': account.nickname,
+        'server_name': account.server_name,
+        'level': account.level,
+        'addons': ''
+    }
 
-        try:
-            reward = await client.claim_daily_reward()
-        except genshin.AlreadyClaimed:
-            data['status'] = '👀 You have already checked-in'
-            claimed = await client.claimed_rewards(limit=1)
-            data['name'] = claimed[0].name
-            data['amount'] = claimed[0].amount
-        else:
-            data['status'] = 'OK'
-            data['name'] = reward.name
-            data['amount'] = reward.amount
+    try:
+        log.info('Preparing to claim daily reward...')
+        reward = await client.claim_daily_reward()
+    except genshin.AlreadyClaimed:
+        log.info('Preparing to get claimed reward information...')
+        claimed = await client.claimed_rewards(limit=1)
+        data['status'] = '👀 You have already checked-in'
+        data['name'] = claimed[0].name
+        data['amount'] = claimed[0].amount
+    else:
+        data['status'] = 'OK'
+        data['addons'] = 'Olah! Odomu'
+        data['name'] = reward.name
+        data['amount'] = reward.amount
 
-        reward_info = await client.get_reward_info()
-        data['claimed_rewards'] = reward_info.claimed_rewards
+    log.info('Preparing to get monthly rewards information...')
+    reward_info = await client.get_reward_info()
+    data['claimed_rewards'] = reward_info.claimed_rewards
 
-        diary = await client.get_diary()
-        diary_data = {
-            'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
-            'current_primogems': diary.data.current_primogems,
-            'current_mora': diary.data.current_mora
-        }
-        data['addons'] = DIARY_TEMPLATE.format(**diary_data)
-        message = MESSAGE_TEMPLATE.format(**data)
+    log.info('Preparing to get traveler\'s diary...')
+    diary = await client.get_diary()
+    diary_data = {
+        'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+        'current_primogems': diary.data.current_primogems,
+        'current_mora': diary.data.current_mora
+    }
+    data['addons'] += DIARY_TEMPLATE.format(**diary_data)
+    message = MESSAGE_TEMPLATE.format(**data)
 
-        result.append(message)
-        await client.close()
-        return result
-    return asyncio.get_event_loop().run_until_complete(task(cookie))
+    result.append(message)
+    await client.close()
+    return result
 
-def taskgenshinpyhonkai(cookie):
-    async def task(cookie):
-        result = []
+async def taskgenshinpyhonkai(cookie):
+    result = []
 
-        client = HonkaiClient()
-        client.set_cookies(cookie)
-        MESSAGE_TEMPLATE = '''📅 {today}
+    client = HonkaiClient()
+    client.set_cookies(cookie)
+    MESSAGE_TEMPLATE = '''📅 {today}
 🔅 Honkai Impact 3rd
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
-        data = {
-            'today': f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %I:%M %p')} UTC+0"
-        }
+    timezone, utc_offset_str = assert_timezone()
 
-        try:
-            reward = await client.claim_daily_reward()
-        except genshin.AlreadyClaimed:
-            data['status'] = '👀 You have already checked-in'
-        else:
-            data['status'] = 'OK'
+    data = {
+        'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else ''
+    }
 
-        # NOTE: Always re-fetch claimed rewards data
-        # since data returned by HonkaiClient.claim_daily_rewards() is not reliable
+    try:
+        log.info('Preparing to claim daily reward...')
+        reward = await client.claim_daily_reward()
+    except genshin.AlreadyClaimed:
+        log.info('Preparing to get claimed reward information...')
         claimed = await client.claimed_rewards(limit=1)
+        data['status'] = '👀 You have already checked-in'
         data['name'] = claimed[0].name
         data['amount'] = claimed[0].amount
+    else:
+        data['status'] = 'OK'
+        data['name'] = reward.name
+        data['amount'] = reward.amount
 
-        reward_info = await client.get_reward_info()
-        data['claimed_rewards'] = reward_info.claimed_rewards
-        message = MESSAGE_TEMPLATE.format(**data)
+    log.info('Preparing to get monthly rewards information...')
+    reward_info = await client.get_reward_info()
+    data['claimed_rewards'] = reward_info.claimed_rewards
+    message = MESSAGE_TEMPLATE.format(**data)
 
-        result.append(message)
-        await client.close()
-        return result
-    return asyncio.get_event_loop().run_until_complete(task(cookie))
+    result.append(message)
+    await client.close()
+    return result
 
 task_list = [{
     'name': 'HoYoLAB Community',
@@ -366,7 +379,7 @@ task_list = [{
 }]
 
 
-def run_task(name, cookies, func):
+async def run_task(name, cookies, func):
     success_count = 0
     failure_count = 0
 
@@ -387,7 +400,10 @@ def run_task(name, cookies, func):
         log.info('Preparing to perform task for account {i}...'.format(i=i))
         raw_result = ''
         try:
-            raw_result = func(cookie)
+            if inspect.iscoroutinefunction(func):
+                raw_result = await func(cookie)
+            else:
+                raw_result = func(cookie)
             success_count += 1
         except Exception as e:
             raw_result = e
@@ -397,6 +413,7 @@ def run_task(name, cookies, func):
             result_str = "".join(raw_result) if isinstance(raw_result, Iterable) else raw_result
             result_fmt = f'🌈 No.{i}:\n{result_str}\n'
             result_list.append(result_fmt)
+            await asyncio.sleep(1)
         continue
 
     task_name_fmt = f'🏆 {name}'
@@ -405,12 +422,12 @@ def run_task(name, cookies, func):
     return message_box
 
 
-def job1():
+async def job1():
     log.info(banner)
     random_sleep(config.RANDOM_SLEEP_SECS_RANGE)
     log.info('Starting...')
     finally_result_dict = {
-        i['name']: run_task(i['name'], i['cookies'], i['function'])
+        i['name']: await run_task(i['name'], i['cookies'], i['function'])
         for i in task_list
     }
 
@@ -732,42 +749,45 @@ async def job2genshinpy():
     return result
 
 
-async def trycatchjob2():
+def schedulecatch(func):
     try:
-        result = await job2genshinpy()
-    except:
-        return False
-    else:
-        return result
+        asyncio.get_event_loop().run_until_complete(func())
+    except Exception as e:
+        print(e)
 
 
-def run_once():
-    for i in dict(os.environ):
-        if 'UID_' in i:
-            del os.environ[i]
+async def run_once():
+    try:
+        for i in dict(os.environ):
+            if 'UID_' in i:
+                del os.environ[i]
 
-    gh.set_lang(config.LANGUAGE)
-    if config.COOKIE_RESIN_TIMER:
-        job2()
-    if config.GENSHINPY.get('cookies'):
-        asyncio.get_event_loop().run_until_complete(trycatchjob2())
-    job1()
+        gh.set_lang(config.LANGUAGE)
+        if config.COOKIE_RESIN_TIMER:
+            job2()
+        if config.GENSHINPY.get('cookies'):
+            await job2genshinpy()
+        await job1()
+    except Exception as e:
+        print(e)
 
 
 async def main():
-    run_once()
-    schedule.every().day.at(config.CHECK_IN_TIME).do(job1)
+    await run_once()
+
+    schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
+
     if config.CHECK_RESIN_SECS_RANGE:
         t1, t2 = config.CHECK_RESIN_SECS_RANGE.split('-')
         if config.COOKIE_RESIN_TIMER:
             schedule.every(int(t1)).to(int(t2)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(trycatchjob2()))
+            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpy))
     else:
         if config.COOKIE_RESIN_TIMER:
             schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
-            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: asyncio.get_event_loop().run_until_complete(trycatchjob2()))
+            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
 
     while True:
         await asyncio.sleep(1)
