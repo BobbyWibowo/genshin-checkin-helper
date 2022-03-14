@@ -223,11 +223,11 @@ async def taskgenshinpy(cookie):
 
     client = genshin.GenshinClient()
     client.set_cookies(cookie)
+
     log.info('Preparing to get user game roles information...')
     accounts = await client.genshin_accounts()
     if len(accounts) < 1:
-        log.info("Are there no Genshin accounts in this HoYoLab account?")
-        return
+        return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
     MESSAGE_TEMPLATE = '''📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
@@ -253,7 +253,6 @@ async def taskgenshinpy(cookie):
         account = accounts[0]
 
     timezone, utc_offset_str = assert_timezone(account.server)
-
     data = {
         'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
         'nickname': account.nickname,
@@ -271,6 +270,8 @@ async def taskgenshinpy(cookie):
         data['status'] = '👀 You have already checked-in'
         data['name'] = claimed[0].name
         data['amount'] = claimed[0].amount
+    except Exception as e:
+        print(e)
     else:
         data['status'] = 'OK'
         data['addons'] = 'Olah! Odomu\n    ' # extra whitespaces for formatting with traveler's diary
@@ -300,6 +301,7 @@ async def taskgenshinpyhonkai(cookie):
 
     client = HonkaiClient()
     client.set_cookies(cookie)
+
     MESSAGE_TEMPLATE = '''📅 {today}
 🔅 Honkai Impact 3rd
     Today's reward: {name} x {amount}
@@ -307,7 +309,6 @@ async def taskgenshinpyhonkai(cookie):
     Status: {status}'''
 
     timezone, utc_offset_str = assert_timezone()
-
     data = {
         'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else ''
     }
@@ -321,6 +322,8 @@ async def taskgenshinpyhonkai(cookie):
         data['status'] = '👀 You have already checked-in'
         data['name'] = claimed[0].name
         data['amount'] = claimed[0].amount
+    except Exception as e:
+        print(e)
     else:
         data['status'] = 'OK'
         data['name'] = reward.name
@@ -539,7 +542,10 @@ async def job2genshinpy():
         client = genshin.GenshinClient()
         client.set_cookies(i)
 
+        log.info('Preparing to get user game roles information...')
         accounts = await client.genshin_accounts()
+        if len(accounts) < 1:
+            return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
         expedition_fmt = '└─ {character_name:<10} {expedition_status}'
         RESIN_TIMER_TEMPLATE = '''🏆 thesadru/genshin.py
@@ -561,18 +567,20 @@ async def job2genshinpy():
 
         for account in accounts:
             if len(uids) > 0 and account.uid not in uids:
-                log.info(f"Skipping Real-Time Notes for {account.nickname} {account.server_name}...")
+                log.info(f"Skipping real-time notes for UID {account.uid}...")
                 continue
 
-            notes = await client.get_notes(account.uid)
-            if not notes:
-                log.info(f"Failed to fetch Real-Time Notes for {account.nickname} {account.server_name}, skipping...")
+            try:
+                log.info(f"Preparing to get real-time notes information for UID {account.uid}...")
+                notes = await client.get_notes(account.uid)
+            except genshin.GenshinException as e:
+                log.info(e)
                 continue
-
-            log.info(f"Processing Real-Time Notes for {account.nickname} {account.server_name}...")
+            except Exception as e:
+                print(e)
+                continue
 
             timezone, utc_offset_str = assert_timezone(account.server)
-
             data = {
                 'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
                 'nickname': account.nickname,
