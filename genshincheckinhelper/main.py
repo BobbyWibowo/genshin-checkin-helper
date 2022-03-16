@@ -61,7 +61,7 @@ Channel      : https://t.me/genshinhelperupdates
 
 def random_sleep(interval: str):
     seconds = randint(*[int(i) for i in interval.split('-')])
-    log.info('Sleep for {seconds} seconds...'.format(seconds=seconds))
+    log.info('Sleeping for {seconds}s...'.format(seconds=seconds))
     sleep(seconds)
 
 
@@ -80,9 +80,9 @@ def notify_me(title, content):
     notifier = config.ONEPUSH.get('notifier')
     params = config.ONEPUSH.get('params')
     if not notifier or not params:
-        log.info('No notification method configured ...')
+        log.info('No notification method configured.')
         return
-    log.info('Preparing to send notification ...')
+    log.info('Preparing to send notification...')
     return notify(notifier, title=title, content=content, **params)
 
 
@@ -226,120 +226,126 @@ def task8(cookie):
     return result
 
 async def taskgenshinpy(cookie):
-    result = []
+    try:
+        result = []
 
-    client = genshin.GenshinClient()
-    client.set_cookies(cookie)
+        client = genshin.GenshinClient()
+        client.set_cookies(cookie)
 
-    log.info('Preparing to get user game roles information...')
-    accounts = await client.genshin_accounts()
-    if len(accounts) < 1:
-        return log.info("There are no Genshin accounts associated to this HoYoverse account.")
+        log.info('Preparing to get user game roles information...')
+        accounts = await client.genshin_accounts()
+        if len(accounts) < 1:
+            return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-    MESSAGE_TEMPLATE = '''📅 {today}
+        MESSAGE_TEMPLATE = '''📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}
     {addons}'''
 
-    DIARY_TEMPLATE = '''Traveler's Diary: {month}
+        DIARY_TEMPLATE = '''Traveler's Diary: {month}
     💠 Primogems: {current_primogems}
     🌕 Mora: {current_mora}'''
 
-    account = {}
-    if config.GENSHINPY.get('uids'):
-        first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
-        for a in accounts:
-            if a.uid == first_uid:
-                account = a
-        if not account:
-            log.info(f"Could not find account matching UID {first_uid}.")
-            return
-    else:
-        account = accounts[0]
+        account = {}
+        if config.GENSHINPY.get('uids'):
+            first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
+            for a in accounts:
+                if a.uid == first_uid:
+                    account = a
+            if not account:
+                log.info(f"Could not find account matching UID {first_uid}.")
+                return
+        else:
+            account = accounts[0]
 
-    timezone, utc_offset_str = assert_timezone(account.server)
-    data = {
-        'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-        'nickname': account.nickname,
-        'server_name': account.server_name,
-        'level': account.level,
-        'addons': ''
-    }
+        timezone, utc_offset_str = assert_timezone(account.server)
+        data = {
+            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+            'nickname': account.nickname,
+            'server_name': account.server_name,
+            'level': account.level,
+            'addons': ''
+        }
 
-    try:
-        log.info('Preparing to claim daily reward...')
-        reward = await client.claim_daily_reward()
-    except genshin.AlreadyClaimed:
-        log.info('Preparing to get claimed reward information...')
-        claimed = await client.claimed_rewards(limit=1)
-        data['status'] = '👀 You have already checked-in'
-        data['name'] = claimed[0].name
-        data['amount'] = claimed[0].amount
-    else:
-        data['status'] = 'OK'
-        data['addons'] = 'Olah! Odomu\n    ' # extra whitespaces for formatting with traveler's diary
-        data['name'] = reward.name
-        data['amount'] = reward.amount
+        try:
+            log.info('Preparing to claim daily reward...')
+            reward = await client.claim_daily_reward()
+        except genshin.AlreadyClaimed:
+            log.info('Preparing to get claimed reward information...')
+            claimed = await client.claimed_rewards(limit=1)
+            data['status'] = '👀 You have already checked-in'
+            data['name'] = claimed[0].name
+            data['amount'] = claimed[0].amount
+        else:
+            data['status'] = 'OK'
+            data['addons'] = 'Olah! Odomu\n    ' # extra whitespaces for formatting with traveler's diary
+            data['name'] = reward.name
+            data['amount'] = reward.amount
 
-    log.info('Preparing to get monthly rewards information...')
-    reward_info = await client.get_reward_info()
-    data['claimed_rewards'] = reward_info.claimed_rewards
+        log.info('Preparing to get monthly rewards information...')
+        reward_info = await client.get_reward_info()
+        data['claimed_rewards'] = reward_info.claimed_rewards
 
-    log.info('Preparing to get traveler\'s diary...')
-    diary = await client.get_diary()
-    diary_data = {
-        'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
-        'current_primogems': diary.data.current_primogems,
-        'current_mora': diary.data.current_mora
-    }
-    data['addons'] += DIARY_TEMPLATE.format(**diary_data)
-    message = MESSAGE_TEMPLATE.format(**data)
-
-    result.append(message)
-    await client.close()
+        log.info('Preparing to get traveler\'s diary...')
+        diary = await client.get_diary()
+        diary_data = {
+            'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+            'current_primogems': diary.data.current_primogems,
+            'current_mora': diary.data.current_mora
+        }
+        data['addons'] += DIARY_TEMPLATE.format(**diary_data)
+        message = MESSAGE_TEMPLATE.format(**data)
+        result.append(message)
+    finally:
+        await client.close()
+        log.info('Task finished, http client closed.')
     return result
 
 async def taskgenshinpyhonkai(cookie):
-    result = []
+    try:
+        result = []
 
-    client = HonkaiClient()
-    client.set_cookies(cookie)
+        client = HonkaiClient()
+        client.set_cookies(cookie)
 
-    MESSAGE_TEMPLATE = '''📅 {today}
+        MESSAGE_TEMPLATE = '''📅 {today}
 🔅 Honkai Impact 3rd
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
-    timezone, utc_offset_str = assert_timezone()
-    data = {
-        'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else ''
-    }
+        timezone, utc_offset_str = assert_timezone()
+        data = {
+            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else ''
+        }
 
-    try:
-        log.info('Preparing to claim daily reward...')
-        await client.claim_daily_reward()
-    except genshin.AlreadyClaimed:
-        data['status'] = '👀 You have already checked-in'
-    else:
-        data['status'] = 'OK'
+        try:
+            log.info('Preparing to claim daily reward...')
+            reward = await client.claim_daily_reward()
+        except genshin.AlreadyClaimed:
+            log.info('Preparing to get claimed reward information...')
+            claimed = await client.claimed_rewards(limit=1)
+            data['status'] = '👀 You have already checked-in'
+            data['name'] = claimed[0].name
+            data['amount'] = claimed[0].amount
+        except Exception as e:
+            await client.close()
+            raise e
+        else:
+            data['status'] = 'OK'
+            data['name'] = reward.name
+            data['amount'] = reward.amount
 
-    # NOTE: Always re-fetch claimed reward information, since data returned by
-    # client.claim_daily_reward() is not always reliable for Honkai client
-    log.info('Preparing to get claimed reward information...')
-    claimed = await client.claimed_rewards(limit=1)
-    data['name'] = claimed[0].name
-    data['amount'] = claimed[0].amount
-
-    log.info('Preparing to get monthly rewards information...')
-    reward_info = await client.get_reward_info()
-    data['claimed_rewards'] = reward_info.claimed_rewards
-    message = MESSAGE_TEMPLATE.format(**data)
-
-    result.append(message)
-    await client.close()
+        log.info('Preparing to get monthly rewards information...')
+        reward_info = await client.get_reward_info()
+        data['claimed_rewards'] = reward_info.claimed_rewards
+        message = MESSAGE_TEMPLATE.format(**data)
+        result.append(message)
+    finally:
+        await client.close()
+        log.info('Task finished, http client closed.')
     return result
 
 task_list = [{
@@ -430,8 +436,8 @@ async def run_task(name, cookies, func):
 
 async def job1():
     log.info(banner)
+    log.info('Starting daily check-in tasks...')
     random_sleep(config.RANDOM_SLEEP_SECS_RANGE)
-    log.info('Starting...')
     finally_result_dict = {
         i['name']: await run_task(i['name'], i['cookies'], i['function'])
         for i in task_list
@@ -450,10 +456,11 @@ async def job1():
         content = f'```\n{message_box}```' if is_markdown else message_box
         notify_me(title, content)
 
-    log.info('End of process run')
+    log.info('Finished daily check-in tasks.')
 
 
 def job2():
+    log.info('Starting real-time notes tasks...')
     result = []
     for i in get_cookies(config.COOKIE_RESIN_TIMER):
         ys = gh.YuanShen(i)
@@ -541,222 +548,223 @@ def job2():
     return result
 
 async def job2genshinpy():
+    log.info('Starting real-time notes tasks using 「thesadru/genshin.py」...')
     result = []
     for i in get_cookies(config.GENSHINPY.get('cookies')):
-        client = genshin.GenshinClient()
-        client.set_cookies(i)
+        try:
+            client = genshin.GenshinClient()
+            client.set_cookies(i)
 
-        log.info('Preparing to get user game roles information...')
-        accounts = await client.genshin_accounts()
-        if len(accounts) < 1:
-            return log.info("There are no Genshin accounts associated to this HoYoverse account.")
+            log.info('Preparing to get user game roles information...')
+            accounts = await client.genshin_accounts()
+            if len(accounts) < 1:
+                return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-        expedition_fmt = '└─ {character_name:<10} {expedition_status}'
-        RESIN_TIMER_TEMPLATE = '''🏆 thesadru/genshin.py
+            expedition_fmt = '└─ {character_name:<10} {expedition_status}'
+            RESIN_TIMER_TEMPLATE = '''🏆 thesadru/genshin.py
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
-     └─ {until_resin_recovery_date_fmt}
+    └─ {until_resin_recovery_date_fmt}
     Realm Currency: {current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
-     └─ {until_realm_currency_recovery_date_fmt}
+    └─ {until_realm_currency_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
 
-        uids = []
-        if (config.GENSHINPY.get('uids')):
-            for uid in config.GENSHINPY.get('uids').split('#'):
-                uids.append(int(uid))
+            uids = []
+            if (config.GENSHINPY.get('uids')):
+                for uid in config.GENSHINPY.get('uids').split('#'):
+                    uids.append(int(uid))
 
-        for account in accounts:
-            if len(uids) > 0 and account.uid not in uids:
-                log.info(f"Skipping real-time notes for UID {account.uid}...")
-                continue
+            for account in accounts:
+                if len(uids) > 0 and account.uid not in uids:
+                    log.info(f"Skipped notes for UID {account.uid}.")
+                    continue
 
-            try:
-                log.info(f"Preparing to get real-time notes information for UID {account.uid}...")
+                log.info(f"Preparing to get notes information for UID {account.uid}...")
                 notes = await client.get_notes(account.uid)
-            except genshin.GenshinException as e:
-                log.info(e)
-                continue
-            except Exception as e:
-                print(e)
-                continue
 
-            timezone, utc_offset_str = assert_timezone(account.server)
-            data = {
-                'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-                'nickname': account.nickname,
-                'server_name': account.server_name,
-                'level': account.level,
-                'current_resin': notes.current_resin,
-                'max_resin': notes.max_resin,
-                'until_resin_recovery_fmt': '',
-                'current_realm_currency': notes.current_realm_currency,
-                'max_realm_currency': notes.max_realm_currency,
-                'until_realm_currency_recovery_fmt': '',
-                'completed_commissions': notes.completed_commissions,
-                'max_commissions': notes.max_comissions,
-                'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
-                'remaining_resin_discounts': notes.remaining_resin_discounts,
-                'max_resin_discounts': notes.max_resin_discounts,
-                'resin_discounts_status': '(Not used up yet!)' if notes.remaining_resin_discounts > 0 else '',
-                'completed_expeditions': 0,
-                'max_expeditions': notes.max_expeditions
-            }
+                timezone, utc_offset_str = assert_timezone(account.server)
+                data = {
+                    'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                    'nickname': account.nickname,
+                    'server_name': account.server_name,
+                    'level': account.level,
+                    'current_resin': notes.current_resin,
+                    'max_resin': notes.max_resin,
+                    'until_resin_recovery_fmt': '',
+                    'current_realm_currency': notes.current_realm_currency,
+                    'max_realm_currency': notes.max_realm_currency,
+                    'until_realm_currency_recovery_fmt': '',
+                    'completed_commissions': notes.completed_commissions,
+                    'max_commissions': notes.max_comissions,
+                    'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
+                    'remaining_resin_discounts': notes.remaining_resin_discounts,
+                    'max_resin_discounts': notes.max_resin_discounts,
+                    'resin_discounts_status': '(Not used up yet!)' if notes.remaining_resin_discounts > 0 else '',
+                    'completed_expeditions': 0,
+                    'max_expeditions': notes.max_expeditions
+                }
 
-            details = []
-            earliest_expedition = False
-            for expedition in notes.expeditions:
-                expedition_data = { 'character_name': expedition.character.name }
-                if expedition.finished:
-                    expedition_data['expedition_status'] = 'Expedition completed!'
-                    data['completed_expeditions'] += 1
-                else:
-                    remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
-                    expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
-                    if not earliest_expedition or expedition.completed_at < earliest_expedition:
-                        earliest_expedition = expedition.completed_at
-                details.append(expedition_fmt.format(**expedition_data))
-
-            if earliest_expedition:
-                if timezone:
-                    details.append(f"└─ Earliest at {earliest_expedition.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}")
-                else:
-                    details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
-
-            is_full = notes.current_resin >= notes.max_resin
-            is_resin_recovered_at_datetime = isinstance(notes.resin_recovered_at, datetime.datetime)
-            if not is_full and is_resin_recovered_at_datetime:
-                until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
-                if timezone:
-                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
-                else:
-                    data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
-            else:
-                data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
-
-            do_realm_currency = bool(notes.max_realm_currency)
-            is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-            is_realm_currency_recovered_at_datetime = isinstance(notes.realm_currency_recovered_at, datetime.datetime)
-            if not do_realm_currency:
-                data['until_realm_currency_recovery_date_fmt'] = 'Not available or failed to load!'
-            elif not is_realm_currency_full and is_realm_currency_recovered_at_datetime:
-                until_realm_currency_recovery = (notes.realm_currency_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
-                if timezone:
-                    data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
-                else:
-                    data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
-            else:
-                data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
-
-            data['expedition_details'] = '\n     '.join(details)
-
-            message = RESIN_TIMER_TEMPLATE.format(**data)
-            if len(details) > 0:
-                message += '\n     '.join([''] + details)
-            result.append(message)
-            log.info(message)
-
-            is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
-            content = f'```\n{message}```' if is_markdown else message
-            status = 'Push conditions have not been met yet, continue monitoring...'
-
-            count = 5
-            IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
-            RESIN_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_NOTIFY_CNT"
-            RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT"
-            RESIN_LAST_RECOVERY_TIME = f"UID_{account.uid}_RESIN_LAST_RECOVERY_TIME"
-            REALM_CURRENCY_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_NOTIFY_CNT"
-            REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
-            REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
-            EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
-
-            is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
-            os.environ[IS_NOTIFY_STR] = 'False'
-            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
-            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
-            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
-
-            is_threshold = notes.current_resin >= int(config.RESIN_THRESHOLD)
-            is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
-            is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
-            is_resin_recovery_time_changed = False
-            if is_resin_recovered_at_datetime:
-                os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
-                is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
-            is_any_expedition_completed = data['completed_expeditions'] > 0
-
-            is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
-            if do_realm_currency:
-                os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
-                os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
-                try:
-                    realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold'))
-                    if realm_currency_threshold < 0:
-                        is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
+                details = []
+                earliest_expedition = False
+                for expedition in notes.expeditions:
+                    expedition_data = { 'character_name': expedition.character.name }
+                    if expedition.finished:
+                        expedition_data['expedition_status'] = 'Expedition completed!'
+                        data['completed_expeditions'] += 1
                     else:
-                        is_realm_currency_threshold = notes.current_realm_currency >= realm_currency_threshold
-                except:
-                    pass
-                is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
-                is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
-                if is_realm_currency_recovered_at_datetime:
-                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovered_at.timestamp())
-                    is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovered_at.timestamp()) > 400
+                        remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                        expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
+                        if not earliest_expedition or expedition.completed_at < earliest_expedition:
+                            earliest_expedition = expedition.completed_at
+                    details.append(expedition_fmt.format(**expedition_data))
 
-            is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
+                if earliest_expedition:
+                    if timezone:
+                        details.append(f"└─ Earliest at {earliest_expedition.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}")
+                    else:
+                        details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
-            if is_full and is_resin_notify and not is_do_not_disturb:
-                os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
-                status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
-                os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
-                status = 'Original Resin is almost full!'
-                os.environ[IS_NOTIFY_STR] = 'True'
-                os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
-            elif is_resin_recovery_time_changed:
-                status = 'Original Resin\'s recovery time has changed!'
-                os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_realm_currency_full and is_realm_currency_notify and not is_do_not_disturb:
-                os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) + 1)
-                status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
-                os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_realm_currency_threshold and is_realm_currency_threshold_notify and not is_do_not_disturb:
-                status = 'Realm Currency is almost full!'
-                os.environ[IS_NOTIFY_STR] = 'True'
-                os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
-            elif is_realm_currency_recovery_time_changed:
-                status = 'Realm Currency\'s recovery time has changed!'
-                os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
-                os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
-                status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
-                os.environ[IS_NOTIFY_STR] = 'True'
-            elif is_first_run:
-                status = 'Real-Time Notes is being monitored!'
-                os.environ[IS_NOTIFY_STR] = 'True'
+                is_full = notes.current_resin >= notes.max_resin
+                is_resin_recovered_at_datetime = isinstance(notes.resin_recovered_at, datetime.datetime)
+                if not is_full and is_resin_recovered_at_datetime:
+                    until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                    data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
+                    if timezone:
+                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                    else:
+                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
+                else:
+                    data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
-            os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
-            os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-            if is_resin_recovered_at_datetime:
-                os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
-            os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
+                do_realm_currency = bool(notes.max_realm_currency)
+                is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
+                is_realm_currency_recovered_at_datetime = isinstance(notes.realm_currency_recovered_at, datetime.datetime)
+                if not do_realm_currency:
+                    data['until_realm_currency_recovery_date_fmt'] = 'Not available or failed to load!'
+                elif not is_realm_currency_full and is_realm_currency_recovered_at_datetime:
+                    until_realm_currency_recovery = (notes.realm_currency_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                    data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
+                    if timezone:
+                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                    else:
+                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
+                else:
+                    data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
-            if do_realm_currency:
-                os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
-                os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
-                if is_realm_currency_recovered_at_datetime:
-                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovered_at.timestamp())
+                data['expedition_details'] = '\n     '.join(details)
 
-            title = status
-            log.info(title)
-            if os.environ[IS_NOTIFY_STR] == 'True':
-                notify_me(title, content)
-        await client.close()
+                message = RESIN_TIMER_TEMPLATE.format(**data)
+                if len(details) > 0:
+                    message += '\n     '.join([''] + details)
+                result.append(message)
+                log.info(message)
+
+                is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
+                content = f'```\n{message}```' if is_markdown else message
+                status = 'Push conditions have not been met yet, will re-check later as scheduled.'
+
+                count = 5
+                IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
+                RESIN_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_NOTIFY_CNT"
+                RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT"
+                RESIN_LAST_RECOVERY_TIME = f"UID_{account.uid}_RESIN_LAST_RECOVERY_TIME"
+                REALM_CURRENCY_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_NOTIFY_CNT"
+                REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
+                REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
+                EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
+
+                is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
+                os.environ[IS_NOTIFY_STR] = 'False'
+                os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if os.environ.get(RESIN_NOTIFY_CNT_STR) else '0'
+                os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+
+                is_threshold = notes.current_resin >= int(config.RESIN_THRESHOLD)
+                is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
+                is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
+                is_resin_recovery_time_changed = False
+                if is_resin_recovered_at_datetime:
+                    os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
+                    is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
+                is_any_expedition_completed = data['completed_expeditions'] > 0
+
+                is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
+                if do_realm_currency:
+                    os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
+                    os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
+                    try:
+                        realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold'))
+                        if realm_currency_threshold < 0:
+                            is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
+                        else:
+                            is_realm_currency_threshold = notes.current_realm_currency >= realm_currency_threshold
+                    except:
+                        pass
+                    is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
+                    is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
+                    if is_realm_currency_recovered_at_datetime:
+                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovered_at.timestamp())
+                        is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovered_at.timestamp()) > 400
+
+                is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
+
+                if is_full and is_resin_notify and not is_do_not_disturb:
+                    os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
+                    status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
+                    status = 'Original Resin is almost full!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                    os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+                elif is_resin_recovery_time_changed:
+                    status = 'Original Resin\'s recovery time has changed!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_realm_currency_full and is_realm_currency_notify and not is_do_not_disturb:
+                    os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) + 1)
+                    status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_realm_currency_threshold and is_realm_currency_threshold_notify and not is_do_not_disturb:
+                    status = 'Realm Currency is almost full!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                    os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+                elif is_realm_currency_recovery_time_changed:
+                    status = 'Realm Currency\'s recovery time has changed!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+                    os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+                    status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_first_run:
+                    status = 'Real-Time Notes is being monitored!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+
+                os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
+                os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
+                if is_resin_recovered_at_datetime:
+                    os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
+
+                if do_realm_currency:
+                    os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
+                    os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
+                    if is_realm_currency_recovered_at_datetime:
+                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovered_at.timestamp())
+
+                title = status
+                log.info(title)
+                if os.environ[IS_NOTIFY_STR] == 'True':
+                    notify_me(title, content)
+        except genshin.GenshinException as e:
+            log.info(e)
+        except Exception as e:
+            log.exception('EXCEPTION')
+        finally:
+            await client.close()
+            log.info('Task finished, http client closed.')
     return result
 
 
