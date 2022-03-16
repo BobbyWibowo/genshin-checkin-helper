@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from inspect import iscoroutinefunction
 from random import randint
 from time import sleep
+from typing import List
 import datetime
 import os
 
@@ -34,6 +35,12 @@ import genshin # thesadru/genshin.py
 class HonkaiClient(genshin.GenshinClient):
     ACT_ID = "e202110291205111"
     REWARD_URL = "https://api-os-takumi.mihoyo.com/event/mani/"
+
+    # NOTE: genshin.GenshinClient will permanently cache Genshin rewards data,
+    # so temporarily override the function to not use caching for Honkai client
+    async def get_monthly_rewards(self, *, lang: str = None) -> List[genshin.models.DailyReward]:
+        data = await self.request_daily_reward("home", lang=lang)
+        return [genshin.models.DailyReward(**i) for i in data["awards"]]
 
 import nest_asyncio
 nest_asyncio.apply()
