@@ -566,9 +566,9 @@ async def job2genshinpy():
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
-    └─ {until_resin_recovery_date_fmt}
+     └─ {until_resin_recovery_date_fmt}
     Realm Currency: {current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
-    └─ {until_realm_currency_recovery_date_fmt}
+     └─ {until_realm_currency_recovery_date_fmt}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
