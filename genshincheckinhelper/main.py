@@ -270,8 +270,6 @@ async def taskgenshinpy(cookie):
         data['status'] = '👀 You have already checked-in'
         data['name'] = claimed[0].name
         data['amount'] = claimed[0].amount
-    except Exception as e:
-        print(e)
     else:
         data['status'] = 'OK'
         data['addons'] = 'Olah! Odomu\n    ' # extra whitespaces for formatting with traveler's diary
@@ -315,19 +313,18 @@ async def taskgenshinpyhonkai(cookie):
 
     try:
         log.info('Preparing to claim daily reward...')
-        reward = await client.claim_daily_reward()
+        await client.claim_daily_reward()
     except genshin.AlreadyClaimed:
-        log.info('Preparing to get claimed reward information...')
-        claimed = await client.claimed_rewards(limit=1)
         data['status'] = '👀 You have already checked-in'
-        data['name'] = claimed[0].name
-        data['amount'] = claimed[0].amount
-    except Exception as e:
-        print(e)
     else:
         data['status'] = 'OK'
-        data['name'] = reward.name
-        data['amount'] = reward.amount
+
+    # NOTE: Always re-fetch claimed reward information, since data returned by
+    # client.claim_daily_reward() is not always reliable for Honkai client
+    log.info('Preparing to get claimed reward information...')
+    claimed = await client.claimed_rewards(limit=1)
+    data['name'] = claimed[0].name
+    data['amount'] = claimed[0].amount
 
     log.info('Preparing to get monthly rewards information...')
     reward_info = await client.get_reward_info()
