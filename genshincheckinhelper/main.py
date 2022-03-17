@@ -330,9 +330,6 @@ async def taskgenshinpyhonkai(cookie):
             data['status'] = '👀 You have already checked-in'
             data['name'] = claimed[0].name
             data['amount'] = claimed[0].amount
-        except Exception as e:
-            await client.close()
-            raise e
         else:
             data['status'] = 'OK'
             data['name'] = reward.name
