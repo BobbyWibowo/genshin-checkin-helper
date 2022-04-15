@@ -7,9 +7,9 @@
 
 from collections.abc import Iterable
 from inspect import iscoroutinefunction
+# from pprint import pprint
 from random import randint
 from time import sleep
-from typing import List
 import datetime
 import os
 
@@ -30,17 +30,6 @@ from onepush import notify
 
 import asyncio
 import genshin # thesadru/genshin.py
-
-# NOTE: Temporary solution until Honkai is fully supported by genshin.py library
-class HonkaiClient(genshin.GenshinClient):
-    ACT_ID = "e202110291205111"
-    REWARD_URL = "https://api-os-takumi.mihoyo.com/event/mani/"
-
-    # NOTE: genshin.GenshinClient will permanently cache Genshin rewards data,
-    # so temporarily override the function to not use caching for Honkai client
-    async def get_monthly_rewards(self, *, lang: str = None) -> List[genshin.models.DailyReward]:
-        data = await self.request_daily_reward("home", lang=lang)
-        return [genshin.models.DailyReward(**i) for i in data["awards"]]
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -86,7 +75,7 @@ def notify_me(title, content):
     return notify(notifier, title=title, content=content, **params)
 
 
-def assert_timezone(server=None):
+def assert_timezone(server=None, conf=config.GENSHINPY):
     display_utc_offset = 0
     server_utc_offset = {
         'cn_gf01': 8,
@@ -94,11 +83,14 @@ def assert_timezone(server=None):
         'os_usa': -5,
         'os_euro': 1,
         'os_asia': 8,
-        'os_cht': 8
+        'os_cht': 8,
+        'usa01': -5,
+        'eur01': 1,
+        'overseas01': 8
     }
 
-    if type(config.GENSHINPY.get('utc_offset')) == int:
-        display_utc_offset = config.GENSHINPY.get('utc_offset')
+    if type(conf.get('utc_offset')) == int:
+        display_utc_offset = conf.get('utc_offset')
     elif type(server) == str and server_utc_offset[server]:
         display_utc_offset = server_utc_offset[server]
 
@@ -229,11 +221,11 @@ async def taskgenshinpy(cookie):
     try:
         result = []
 
-        client = genshin.GenshinClient()
+        client = genshin.Client(game=genshin.Game.GENSHIN)
         client.set_cookies(cookie)
 
         log.info('Preparing to get user game roles information...')
-        accounts = await client.genshin_accounts()
+        accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
         if len(accounts) < 1:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
@@ -260,7 +252,7 @@ async def taskgenshinpy(cookie):
         else:
             account = accounts[0]
 
-        timezone, utc_offset_str = assert_timezone(account.server)
+        timezone, utc_offset_str = assert_timezone(server=account.server)
         data = {
             'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
             'nickname': account.nickname,
@@ -299,26 +291,46 @@ async def taskgenshinpy(cookie):
         message = MESSAGE_TEMPLATE.format(**data)
         result.append(message)
     finally:
-        await client.close()
-        log.info('Task finished, http client closed.')
+        # await client.close()
+        log.info('Task finished.')
     return result
 
 async def taskgenshinpyhonkai(cookie):
     try:
         result = []
 
-        client = HonkaiClient()
+        client = genshin.Client(game=genshin.Game.HONKAI)
         client.set_cookies(cookie)
 
+        log.info('Preparing to get user game roles information...')
+        accounts = list(filter(lambda account: 'bh3' in account.game_biz, await client.get_game_accounts()))
+        if len(accounts) < 1:
+            return log.info("There are no Honkai accounts associated to this HoYoverse account.")
+
         MESSAGE_TEMPLATE = '''📅 {today}
-🔅 Honkai Impact 3rd
+🔅 {nickname} {server_name} Lv. {level}
     Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
-        timezone, utc_offset_str = assert_timezone()
+        account = {}
+        if config.GENSHINPY_HONKAI.get('uids'):
+            first_uid = int(config.GENSHINPY_HONKAI.get('uids').split('#')[0])
+            for a in accounts:
+                if a.uid == first_uid:
+                    account = a
+            if not account:
+                log.info(f"Could not find account matching UID {first_uid}.")
+                return
+        else:
+            account = accounts[0]
+
+        timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_HONKAI)
         data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else ''
+            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+            'nickname': account.nickname,
+            'server_name': account.server_name,
+            'level': account.level,
         }
 
         try:
@@ -341,8 +353,8 @@ async def taskgenshinpyhonkai(cookie):
         message = MESSAGE_TEMPLATE.format(**data)
         result.append(message)
     finally:
-        await client.close()
-        log.info('Task finished, http client closed.')
+        # await client.close()
+        log.info('Task finished.')
     return result
 
 task_list = [{
@@ -383,7 +395,7 @@ task_list = [{
     'function': taskgenshinpy
 }, {
     'name': 'thesadru/genshin.py-honkai',
-    'cookies': get_cookies(config.GENSHINPY.get('honkai_cookies')),
+    'cookies': get_cookies(config.GENSHINPY_HONKAI.get('cookies')),
     'function': taskgenshinpyhonkai
 }]
 
@@ -549,11 +561,11 @@ async def job2genshinpy():
     result = []
     for i in get_cookies(config.GENSHINPY.get('cookies')):
         try:
-            client = genshin.GenshinClient()
+            client = genshin.Client(game=genshin.Game.GENSHIN)
             client.set_cookies(i)
 
             log.info('Preparing to get user game roles information...')
-            accounts = await client.genshin_accounts()
+            accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
             if len(accounts) < 1:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
@@ -583,7 +595,7 @@ async def job2genshinpy():
                 log.info(f"Preparing to get notes information for UID {account.uid}...")
                 notes = await client.get_notes(account.uid)
 
-                timezone, utc_offset_str = assert_timezone(account.server)
+                timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
                     'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
                     'nickname': account.nickname,
@@ -596,8 +608,8 @@ async def job2genshinpy():
                     'max_realm_currency': notes.max_realm_currency,
                     'until_realm_currency_recovery_fmt': '',
                     'completed_commissions': notes.completed_commissions,
-                    'max_commissions': notes.max_comissions,
-                    'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_comissions else '',
+                    'max_commissions': notes.max_commissions,
+                    'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_commissions else '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
                     'resin_discounts_status': '(Not used up yet!)' if notes.remaining_resin_discounts > 0 else '',
@@ -613,10 +625,10 @@ async def job2genshinpy():
                         expedition_data['expedition_status'] = 'Expedition completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = max((expedition.completed_at.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
                         expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
-                        if not earliest_expedition or expedition.completed_at < earliest_expedition:
-                            earliest_expedition = expedition.completed_at
+                        if not earliest_expedition or expedition.completion_time < earliest_expedition:
+                            earliest_expedition = expedition.completion_time
                     details.append(expedition_fmt.format(**expedition_data))
 
                 if earliest_expedition:
@@ -626,29 +638,29 @@ async def job2genshinpy():
                         details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
                 is_full = notes.current_resin >= notes.max_resin
-                is_resin_recovered_at_datetime = isinstance(notes.resin_recovered_at, datetime.datetime)
-                if not is_full and is_resin_recovered_at_datetime:
-                    until_resin_recovery = (notes.resin_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                is_resin_recovery_time_datetime = isinstance(notes.resin_recovery_time, datetime.datetime)
+                if not is_full and is_resin_recovery_time_datetime:
+                    until_resin_recovery = (notes.resin_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                     data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
                     if timezone:
-                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                     else:
-                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
+                        data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                 else:
                     data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
                 do_realm_currency = bool(notes.max_realm_currency)
                 is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-                is_realm_currency_recovered_at_datetime = isinstance(notes.realm_currency_recovered_at, datetime.datetime)
+                is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, datetime.datetime)
                 if not do_realm_currency:
                     data['until_realm_currency_recovery_date_fmt'] = 'Not available or failed to load!'
-                elif not is_realm_currency_full and is_realm_currency_recovered_at_datetime:
-                    until_realm_currency_recovery = (notes.realm_currency_recovered_at.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                elif not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
+                    until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                     data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
                     if timezone:
-                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                     else:
-                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovered_at.strftime('%Y-%m-%d %I:%M %p')}"
+                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                 else:
                     data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
 
@@ -684,9 +696,9 @@ async def job2genshinpy():
                 is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
                 is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_resin_recovery_time_changed = False
-                if is_resin_recovered_at_datetime:
-                    os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovered_at.timestamp())
-                    is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovered_at.timestamp()) > 400
+                if is_resin_recovery_time_datetime:
+                    os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovery_time.timestamp())
+                    is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovery_time.timestamp()) > 400
                 is_any_expedition_completed = data['completed_expeditions'] > 0
 
                 is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
@@ -703,9 +715,9 @@ async def job2genshinpy():
                         pass
                     is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
                     is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
-                    if is_realm_currency_recovered_at_datetime:
-                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovered_at.timestamp())
-                        is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovered_at.timestamp()) > 400
+                    if is_realm_currency_recovery_time_datetime:
+                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
+                        is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovery_time.timestamp()) > 400
 
                 is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
@@ -741,15 +753,15 @@ async def job2genshinpy():
 
                 os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-                if is_resin_recovered_at_datetime:
-                    os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovered_at.timestamp())
+                if is_resin_recovery_time_datetime:
+                    os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovery_time.timestamp())
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
 
                 if do_realm_currency:
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
-                    if is_realm_currency_recovered_at_datetime:
-                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovered_at.timestamp())
+                    if is_realm_currency_recovery_time_datetime:
+                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovery_time.timestamp())
 
                 title = status
                 log.info(title)
@@ -760,8 +772,8 @@ async def job2genshinpy():
         except Exception as e:
             log.exception('EXCEPTION')
         finally:
-            await client.close()
-            log.info('Task finished, http client closed.')
+            # await client.close()
+            log.info('Task finished.')
     return result
 
 

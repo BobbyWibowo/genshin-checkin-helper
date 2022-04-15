@@ -2,6 +2,6 @@ genshinhelper
 onepush
 schedule
 nest_asyncio
--e git+https://github.com/thesadru/genshin.py@0.4#egg=genshin
+genshin
 aiohttp
 pydantic

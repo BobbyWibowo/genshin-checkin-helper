@@ -10,8 +10,12 @@
     "cookies": "",
     "uids": "",
     "utc_offset": false,
-    "realm_currency_threshold": -80,
-    "honkai_cookies": ""
+    "realm_currency_threshold": -80
+  },
+  "GENSHINPY_HONKAI": {
+    "cookies": "",
+    "uids": "",
+    "utc_offset": false
   },
   "COOKIE_MIHOYOBBS": "",
   "COOKIE_RESIN_TIMER": "",
