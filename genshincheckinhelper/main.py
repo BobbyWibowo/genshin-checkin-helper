@@ -717,7 +717,7 @@ async def job2genshinpy():
                     status = 'Original Resin is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
-                elif is_resin_recovery_time_changed:
+                elif is_resin_recovery_time_changed and not is_full:
                     status = 'Original Resin\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_realm_currency_full and is_realm_currency_notify and not is_do_not_disturb:
@@ -728,7 +728,7 @@ async def job2genshinpy():
                     status = 'Realm Currency is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
-                elif is_realm_currency_recovery_time_changed:
+                elif is_realm_currency_recovery_time_changed and not is_realm_currency_full:
                     status = 'Realm Currency\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
