@@ -784,9 +784,9 @@ async def job2genshinpy():
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
                     status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_transformer_recovery_time_changed and not is_transformer_ready:
-                    status = 'Parametric Transformer\'s recovery time has changed!'
-                    os.environ[IS_NOTIFY_STR] = 'True'
+                #elif is_transformer_recovery_time_changed and not is_transformer_ready:
+                    #status = 'Parametric Transformer\'s recovery time has changed!'
+                    #os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                     status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
