@@ -576,11 +576,17 @@ async def job2genshinpy():
 🔅 {nickname} {server_name} Lv. {level}
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
      └─ {until_resin_recovery_date_fmt}
-    Realm Currency: {current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
-     └─ {until_realm_currency_recovery_date_fmt}
+    Realm Currency: {realm_currency}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
+    Parametric Transformer: {transformer}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
+
+            REALM_CURRENCY_TEMPLATE = '''{current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
+     └─ {until_realm_currency_recovery_date_fmt}'''
+
+            TRANSFORMER_TEMPLATE = '''{until_transformer_recovery_fmt}
+     └─ {until_transformer_recovery_date_fmt}'''
 
             uids = []
             if (config.GENSHINPY.get('uids')):
@@ -609,10 +615,10 @@ async def job2genshinpy():
                     'until_realm_currency_recovery_fmt': '',
                     'completed_commissions': notes.completed_commissions,
                     'max_commissions': notes.max_commissions,
-                    'commissions_status': '(Not finished yet!)' if notes.completed_commissions < notes.max_commissions else '',
+                    'commissions_status': '⚠️' if notes.completed_commissions < notes.max_commissions else '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
-                    'resin_discounts_status': '(Not used up yet!)' if notes.remaining_resin_discounts > 0 else '',
+                    'resin_discounts_status': '⚠️' if notes.remaining_resin_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'max_expeditions': notes.max_expeditions
                 }
@@ -622,7 +628,7 @@ async def job2genshinpy():
                 for expedition in notes.expeditions:
                     expedition_data = { 'character_name': expedition.character.name }
                     if expedition.finished:
-                        expedition_data['expedition_status'] = 'Expedition completed!'
+                        expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
                         remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
@@ -647,22 +653,43 @@ async def job2genshinpy():
                     else:
                         data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                 else:
-                    data['until_resin_recovery_date_fmt'] = 'Full! Do not forget to use them!'
+                    data['until_resin_recovery_date_fmt'] = '✨ Full!'
 
                 do_realm_currency = bool(notes.max_realm_currency)
-                is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-                is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, datetime.datetime)
-                if not do_realm_currency:
-                    data['until_realm_currency_recovery_date_fmt'] = 'Not available or failed to load!'
-                elif not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
-                    until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                    data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
-                    if timezone:
-                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                is_realm_currency_full = is_realm_currency_recovery_time_datetime = False
+                if do_realm_currency:
+                    is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
+                    is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, datetime.datetime)
+                    if not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
+                        until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                        data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
+                        if timezone:
+                            data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        else:
+                            data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                     else:
-                        data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
+                        data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
+                    data['realm_currency'] = REALM_CURRENCY_TEMPLATE.format(**data)
                 else:
-                    data['until_realm_currency_recovery_date_fmt'] = 'Full! Do not forget to use them!'
+                    data['realm_currency'] = 'N/A'
+
+                do_transformer = notes.remaining_transformer_recovery_time is not None
+                is_transformer_ready = is_transformer_recovery_time_datetime = False
+                if do_transformer:
+                    is_transformer_recovery_time_datetime = isinstance(notes.transformer_recovery_time, datetime.datetime)
+                    if is_transformer_recovery_time_datetime:
+                        until_transformer_recovery = (notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                        data['until_transformer_recovery_fmt'] = "{hour} h and {minute} min".format(**minutes_to_hours(until_transformer_recovery / 60))
+                        if timezone:
+                            data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        else:
+                            data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
+                        data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
+                    else:
+                        is_transformer_ready = True
+                        data['transformer'] = '✨ Ready!'
+                else:
+                    data['transformer'] = 'N/A'
 
                 data['expedition_details'] = '\n     '.join(details)
 
@@ -684,6 +711,8 @@ async def job2genshinpy():
                 REALM_CURRENCY_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_NOTIFY_CNT"
                 REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
                 REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
+                TRANSFORMER_NOTIFY_CNT_STR = f"UID_{account.uid}_TRANSFORMER_NOTIFY_CNT"
+                TRANSFORMER_LAST_RECOVERY_TIME = f"UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_TIME"
                 EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
 
                 is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
@@ -719,6 +748,14 @@ async def job2genshinpy():
                         os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
                         is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovery_time.timestamp()) > 400
 
+                is_transformer_notify = is_transformer_recovery_time_changed = False
+                if do_transformer:
+                    os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
+                    is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) < count
+                    if is_transformer_recovery_time_datetime:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(notes.transformer_recovery_time.timestamp())
+                        is_transformer_recovery_time_changed = abs(float(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) - notes.transformer_recovery_time.timestamp()) > 400
+
                 is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
                 if is_full and is_resin_notify and not is_do_not_disturb:
@@ -743,6 +780,13 @@ async def job2genshinpy():
                 elif is_realm_currency_recovery_time_changed and not is_realm_currency_full:
                     status = 'Realm Currency\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_transformer_ready and is_transformer_notify and not is_do_not_disturb:
+                    os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
+                    status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{count})'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_transformer_recovery_time_changed and not is_transformer_ready:
+                    status = 'Parametric Transformer\'s recovery time has changed!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                     status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
@@ -762,6 +806,11 @@ async def job2genshinpy():
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
                     if is_realm_currency_recovery_time_datetime:
                         os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovery_time.timestamp())
+
+                if do_transformer:
+                    os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if is_transformer_ready else '0'
+                    if is_transformer_recovery_time_datetime:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(notes.transformer_recovery_time.timestamp())
 
                 title = status
                 log.info(title)
