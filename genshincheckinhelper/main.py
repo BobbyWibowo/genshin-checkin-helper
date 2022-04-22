@@ -444,7 +444,6 @@ async def run_task(name, cookies, func):
 
 
 async def job1():
-    log.info(banner)
     log.info('Starting daily check-in tasks...')
     random_sleep(config.RANDOM_SLEEP_SECS_RANGE)
     finally_result_dict = {
@@ -850,6 +849,7 @@ async def run_once():
 
 
 async def main():
+    log.info(banner)
     await run_once()
 
     schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
