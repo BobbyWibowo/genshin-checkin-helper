@@ -118,7 +118,7 @@ def seconds_to_time(seconds):
 
 
 def display_time(time, short=False):
-    if type(time) is not dict:
+    if type(time) != dict:
         raise ValueError('Input type must be a dict')
 
     order = ('day', 'hour', 'minute', 'second')
@@ -705,8 +705,8 @@ async def job2genshinpy():
                 else:
                     data['realm_currency'] = 'N/A'
 
-                do_transformer = notes.remaining_transformer_recovery_time is not None
-                is_transformer_ready = is_transformer_recovery_time_datetime = until_transformer_recovery_date = False
+                do_transformer = notes.remaining_transformer_recovery_time != None
+                is_transformer_ready = is_transformer_recovery_time_datetime = until_transformer_recovery = False
                 if do_transformer:
                     is_transformer_recovery_time_datetime = isinstance(notes.transformer_recovery_time, datetime.datetime)
                     if is_transformer_recovery_time_datetime:
@@ -719,10 +719,9 @@ async def job2genshinpy():
                             else:
                                 recovery_date_fmt += ' %I:00 %p'
                         if timezone:
-                            until_transformer_recovery_date = f"{notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
+                            data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
-                            until_transformer_recovery_date = f"{notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
-                        data['until_transformer_recovery_date_fmt'] = f"Ready at {until_transformer_recovery_date}"
+                            data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
                         data['until_transformer_recovery_fmt'] = display_time(until_transformer_recovery_time, True)
                         data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
                     else:
@@ -752,7 +751,7 @@ async def job2genshinpy():
                 REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
                 REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
                 TRANSFORMER_NOTIFY_CNT_STR = f"UID_{account.uid}_TRANSFORMER_NOTIFY_CNT"
-                TRANSFORMER_LAST_RECOVERY_DATE = f"UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_DATE"
+                TRANSFORMER_LAST_RECOVERY_TIME = f"UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_TIME"
                 EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
 
                 is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
@@ -792,9 +791,9 @@ async def job2genshinpy():
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
                     is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) < count
-                    if until_transformer_recovery_date:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_DATE] = os.environ[TRANSFORMER_LAST_RECOVERY_DATE] if os.environ.get(TRANSFORMER_LAST_RECOVERY_DATE) else until_transformer_recovery_date
-                        is_transformer_recovery_time_changed = os.environ[TRANSFORMER_LAST_RECOVERY_DATE] is not until_transformer_recovery_date
+                    if until_transformer_recovery:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(until_transformer_recovery)
+                        is_transformer_recovery_time_changed = int(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) < until_transformer_recovery
 
                 is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
@@ -849,8 +848,8 @@ async def job2genshinpy():
 
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if is_transformer_ready else '0'
-                    if until_transformer_recovery_date:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_DATE] = until_transformer_recovery_date
+                    if until_transformer_recovery:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(until_transformer_recovery)
 
                 title = status
                 log.info(title)
