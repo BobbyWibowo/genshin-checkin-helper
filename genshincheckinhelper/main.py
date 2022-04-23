@@ -101,12 +101,35 @@ def assert_timezone(server=None, conf=config.GENSHINPY):
     return timezone, utc_offset_str
 
 
-def seconds_to_days(seconds):
+def seconds_to_time(seconds):
     seconds = int(seconds)
     if seconds < 0:
         raise ValueError('Input number cannot be negative')
 
-    return {'day': int(seconds / 86400)}
+    minute, second = divmod(seconds, 60)
+    hour, minute = divmod(minute, 60)
+    day, hour = divmod(hour, 24)
+    return {
+        'day': day,
+        'hour': hour,
+        'minute': minute,
+        'second': second
+    }
+
+
+def display_time(time, short=False):
+    if type(time) is not dict:
+        raise ValueError('Input type must be a dict')
+
+    order = ('day', 'hour', 'minute', 'second')
+    result = []
+    for i, name in enumerate(order):
+        value = time[name]
+        if type(value) == int and value > 0:
+            prepend = 'and ' if i == len(order) -1 and len(result) > 0 else ''
+            unit = name[0] if short else (name + 's' if value != 1 else '')
+            result.append('{}{} {}'.format(prepend, value, unit))
+    return ' '.join(result)
 
 
 def task_common(r, d, text_temp1, text_temp2):
@@ -683,22 +706,25 @@ async def job2genshinpy():
                     data['realm_currency'] = 'N/A'
 
                 do_transformer = notes.remaining_transformer_recovery_time is not None
-                is_transformer_ready = is_transformer_recovery_time_datetime = is_transformer_recovery_time_datetime_hires = False
+                is_transformer_ready = is_transformer_recovery_time_datetime = until_transformer_recovery_date = False
                 if do_transformer:
                     is_transformer_recovery_time_datetime = isinstance(notes.transformer_recovery_time, datetime.datetime)
                     if is_transformer_recovery_time_datetime:
-                        until_transformer_recovery = (notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                        until_transformer_recovery_ceil = ceil(until_transformer_recovery)
-                        is_transformer_recovery_time_datetime_hires = until_transformer_recovery_ceil < 86400
-                        if is_transformer_recovery_time_datetime_hires:
-                            data['until_transformer_recovery_fmt'] = "{hour} h and {minute} min".format(**minutes_to_hours(until_transformer_recovery / 60))
-                            if timezone:
-                                data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds())
+                        until_transformer_recovery_time = seconds_to_time(until_transformer_recovery)
+                        recovery_date_fmt = '%Y-%m-%d'
+                        if type(until_transformer_recovery_time['hour']) == int and until_transformer_recovery_time['hour'] > 0:
+                            if type(until_transformer_recovery_time['minute']) == int and until_transformer_recovery_time['minute'] > 0:
+                                recovery_date_fmt += ' %I:%M %p'
                             else:
-                                data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
-                            data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
+                                recovery_date_fmt += ' %I:00 %p'
+                        if timezone:
+                            until_transformer_recovery_date = f"{notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
-                            data['transformer'] = "{day} d".format(**seconds_to_days(until_transformer_recovery_ceil))
+                            until_transformer_recovery_date = f"{notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
+                        data['until_transformer_recovery_date_fmt'] = f"Ready at {until_transformer_recovery_date}"
+                        data['until_transformer_recovery_fmt'] = display_time(until_transformer_recovery_time, True)
+                        data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
                     else:
                         is_transformer_ready = True
                         data['transformer'] = '✨ Ready!'
@@ -726,7 +752,7 @@ async def job2genshinpy():
                 REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT"
                 REALM_CURRENCY_LAST_RECOVERY_TIME = f"UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME"
                 TRANSFORMER_NOTIFY_CNT_STR = f"UID_{account.uid}_TRANSFORMER_NOTIFY_CNT"
-                TRANSFORMER_LAST_RECOVERY_TIME = f"UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_TIME"
+                TRANSFORMER_LAST_RECOVERY_DATE = f"UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_DATE"
                 EXPEDITION_NOTIFY_CNT_STR = f"UID_{account.uid}_EXPEDITION_NOTIFY_CNT"
 
                 is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
@@ -766,9 +792,9 @@ async def job2genshinpy():
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
                     is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) < count
-                    if is_transformer_recovery_time_datetime_hires and is_transformer_recovery_time_datetime:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(notes.transformer_recovery_time.timestamp())
-                        is_transformer_recovery_time_changed = abs(float(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) - notes.transformer_recovery_time.timestamp()) > 400
+                    if until_transformer_recovery_date:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_DATE] = os.environ[TRANSFORMER_LAST_RECOVERY_DATE] if os.environ.get(TRANSFORMER_LAST_RECOVERY_DATE) else until_transformer_recovery_date
+                        is_transformer_recovery_time_changed = os.environ[TRANSFORMER_LAST_RECOVERY_DATE] is not until_transformer_recovery_date
 
                 is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
@@ -798,7 +824,7 @@ async def job2genshinpy():
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
                     status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_transformer_recovery_time_datetime_hires and is_transformer_recovery_time_changed and not is_transformer_ready:
+                elif is_transformer_recovery_time_changed and not is_transformer_ready:
                     status = 'Parametric Transformer\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
@@ -823,8 +849,8 @@ async def job2genshinpy():
 
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if is_transformer_ready else '0'
-                    if is_transformer_recovery_time_datetime_hires and is_transformer_recovery_time_datetime:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(notes.transformer_recovery_time.timestamp())
+                    if until_transformer_recovery_date:
+                        os.environ[TRANSFORMER_LAST_RECOVERY_DATE] = until_transformer_recovery_date
 
                 title = status
                 log.info(title)
