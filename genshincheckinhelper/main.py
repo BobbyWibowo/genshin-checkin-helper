@@ -706,11 +706,10 @@ async def job2genshinpy():
                     data['realm_currency'] = 'N/A'
 
                 do_transformer = notes.remaining_transformer_recovery_time != None
-                is_transformer_ready = is_transformer_recovery_time_datetime = until_transformer_recovery = False
+                is_transformer_ready = until_transformer_recovery = False
                 if do_transformer:
-                    is_transformer_recovery_time_datetime = isinstance(notes.transformer_recovery_time, datetime.datetime)
-                    if is_transformer_recovery_time_datetime:
-                        until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds())
+                    until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds())
+                    if until_transformer_recovery > 0:
                         until_transformer_recovery_time = seconds_to_time(until_transformer_recovery)
                         recovery_date_fmt = '%Y-%m-%d'
                         if type(until_transformer_recovery_time['hour']) == int and until_transformer_recovery_time['hour'] > 0:
