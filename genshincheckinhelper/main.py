@@ -241,7 +241,6 @@ def task7(cookie):
     raw_codes = [t.get_code(id) for id in ids]
     return [str(i['code'] + '\n    ') if i['success'] else str(i['response']['msg'] + '\n    ') for i in raw_codes]
 
-
 def task8(cookie):
     is_sign = gh.check_jfsc(cookie)
     result = '今天已经签到, 请明天再来'
@@ -263,37 +262,46 @@ async def taskgenshinpy(cookie):
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
         MESSAGE_TEMPLATE = '''📅 {today}
-🔅 {nickname} {server_name} Lv. {level}
-    Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}
-    {addons}'''
+    🔅 {nickname} {server_name} Lv. {level}
+'''
 
         DIARY_TEMPLATE = '''Traveler's Diary: {month}
-    💠 Primogems: {current_primogems}
-    🌕 Mora: {current_mora}'''
+💠 Primogems: {current_primogems}
+🌕 Mora: {current_mora}'''
+        
+        CLAIM_TEMPLATE = '''Today's reward: {name} x {amount}
+Total monthly check-ins: {claimed_rewards} day(s)
+Status: {status}
+'''
 
-        account = {}
+        gotAccounts = []
         if config.GENSHINPY.get('uids'):
-            first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
-            for a in accounts:
-                if a.uid == first_uid:
-                    account = a
-            if not account:
-                log.info(f"Could not find account matching UID {first_uid}.")
+            uids = config.GENSHINPY.get('uids').split('#')
+            for _uid in uids:
+                _uid = int(_uid)
+                gotUid = False
+                for a in accounts:
+                    if a.uid == _uid:
+                        gotAccounts.append(a)
+                        gotUid = True
+                if not gotUid:
+                    log.info(f"Could not find account matching UID {_uid}.")
+            if not gotAccounts:
+                log.info(f"Could not find any account matching UIDs {uids}.")
                 return
         else:
-            account = accounts[0]
-
-        timezone, utc_offset_str = assert_timezone(server=account.server)
-        data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-            'nickname': account.nickname,
-            'server_name': account.server_name,
-            'level': account.level,
-            'addons': ''
-        }
-
+            gotAccounts = accounts
+        for account in gotAccounts:
+            timezone, utc_offset_str = assert_timezone(server=account.server)
+            data = {
+                'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                'nickname': account.nickname,
+                'server_name': account.server_name,
+                'level': account.level
+            }
+            message = MESSAGE_TEMPLATE.format(**data)
+            result.append(message)
+        data = {}
         try:
             log.info('Preparing to claim daily reward...')
             reward = await client.claim_daily_reward()
@@ -312,7 +320,9 @@ async def taskgenshinpy(cookie):
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
-
+        claimMsg = CLAIM_TEMPLATE.format(**data)
+        result.append(claimMsg)
+        
         log.info('Preparing to get traveler\'s diary...')
         diary = await client.get_diary()
         diary_data = {
@@ -320,9 +330,9 @@ async def taskgenshinpy(cookie):
             'current_primogems': diary.data.current_primogems,
             'current_mora': diary.data.current_mora
         }
-        data['addons'] += DIARY_TEMPLATE.format(**diary_data)
-        message = MESSAGE_TEMPLATE.format(**data)
-        result.append(message)
+        dailyAddons = DIARY_TEMPLATE.format(**diary_data)
+        result.append(dailyAddons)
+
     finally:
         # await client.close()
         log.info('Task finished.')
