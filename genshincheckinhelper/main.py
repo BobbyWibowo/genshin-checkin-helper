@@ -241,6 +241,7 @@ def task7(cookie):
     raw_codes = [t.get_code(id) for id in ids]
     return [str(i['code'] + '\n    ') if i['success'] else str(i['response']['msg'] + '\n    ') for i in raw_codes]
 
+
 def task8(cookie):
     is_sign = gh.check_jfsc(cookie)
     result = '今天已经签到, 请明天再来'
@@ -261,46 +262,45 @@ async def taskgenshinpy(cookie):
         if len(accounts) < 1:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-        MESSAGE_TEMPLATE = '''📅 {today}
-    🔅 {nickname} {server_name} Lv. {level}
+        DIARY_TEMPLATE = '''    Traveler's Diary: {month}
+    💠 Primogems: {current_primogems}
+    🌕 Mora: {current_mora}'''
+
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} day(s)
+    Status: {status}
 '''
 
-        DIARY_TEMPLATE = '''Traveler's Diary: {month}
-💠 Primogems: {current_primogems}
-🌕 Mora: {current_mora}'''
-        
-        CLAIM_TEMPLATE = '''Today's reward: {name} x {amount}
-Total monthly check-ins: {claimed_rewards} day(s)
-Status: {status}
-'''
-
-        gotAccounts = []
+        got_accounts = []
         if config.GENSHINPY.get('uids'):
             uids = config.GENSHINPY.get('uids').split('#')
             for _uid in uids:
                 _uid = int(_uid)
-                gotUid = False
+                got_uid = False
                 for a in accounts:
                     if a.uid == _uid:
-                        gotAccounts.append(a)
-                        gotUid = True
-                if not gotUid:
+                        got_accounts.append(a)
+                        got_uid = True
+                        break
+                if not got_uid:
                     log.info(f"Could not find account matching UID {_uid}.")
-            if not gotAccounts:
+            if not got_accounts:
                 log.info(f"Could not find any account matching UIDs {uids}.")
                 return
         else:
-            gotAccounts = accounts
-        for account in gotAccounts:
-            timezone, utc_offset_str = assert_timezone(server=account.server)
-            data = {
-                'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-                'nickname': account.nickname,
-                'server_name': account.server_name,
-                'level': account.level
-            }
-            message = MESSAGE_TEMPLATE.format(**data)
+            got_accounts = accounts
+
+        date_appended = False
+        for account in got_accounts:
+            message = ''
+            if not date_appended or type(config.GENSHINPY.get('utc_offset')) != int:
+                timezone, utc_offset_str = assert_timezone(server=account.server)
+                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                message += f'📅 {today}\n'
+                date_appended = True
+            message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
             result.append(message)
+
         data = {}
         try:
             log.info('Preparing to claim daily reward...')
@@ -320,9 +320,9 @@ Status: {status}
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
-        claimMsg = CLAIM_TEMPLATE.format(**data)
-        result.append(claimMsg)
-        
+        claim_msg = CLAIM_TEMPLATE.format(**data)
+        result.append(claim_msg)
+
         log.info('Preparing to get traveler\'s diary...')
         diary = await client.get_diary()
         diary_data = {
@@ -330,9 +330,8 @@ Status: {status}
             'current_primogems': diary.data.current_primogems,
             'current_mora': diary.data.current_mora
         }
-        dailyAddons = DIARY_TEMPLATE.format(**diary_data)
-        result.append(dailyAddons)
-
+        daily_addons = DIARY_TEMPLATE.format(**diary_data)
+        result.append(daily_addons)
     finally:
         # await client.close()
         log.info('Task finished.')
