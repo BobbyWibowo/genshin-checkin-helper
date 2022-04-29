@@ -262,38 +262,46 @@ async def taskgenshinpy(cookie):
         if len(accounts) < 1:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-        MESSAGE_TEMPLATE = '''📅 {today}
-🔅 {nickname} {server_name} Lv. {level}
-    Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}
-    {addons}'''
-
-        DIARY_TEMPLATE = '''Traveler's Diary: {month}
+        DIARY_TEMPLATE = '''    Traveler's Diary: {month}
     💠 Primogems: {current_primogems}
     🌕 Mora: {current_mora}'''
 
-        account = {}
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} day(s)
+    Status: {status}
+'''
+
+        got_accounts = []
         if config.GENSHINPY.get('uids'):
-            first_uid = int(config.GENSHINPY.get('uids').split('#')[0])
-            for a in accounts:
-                if a.uid == first_uid:
-                    account = a
-            if not account:
-                log.info(f"Could not find account matching UID {first_uid}.")
+            uids = config.GENSHINPY.get('uids').split('#')
+            for _uid in uids:
+                _uid = int(_uid)
+                got_uid = False
+                for a in accounts:
+                    if a.uid == _uid:
+                        got_accounts.append(a)
+                        got_uid = True
+                        break
+                if not got_uid:
+                    log.info(f"Could not find account matching UID {_uid}.")
+            if not got_accounts:
+                log.info(f"Could not find any account matching UIDs {uids}.")
                 return
         else:
-            account = accounts[0]
+            got_accounts = accounts
 
-        timezone, utc_offset_str = assert_timezone(server=account.server)
-        data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-            'nickname': account.nickname,
-            'server_name': account.server_name,
-            'level': account.level,
-            'addons': ''
-        }
+        date_appended = False
+        for account in got_accounts:
+            message = ''
+            if not date_appended or type(config.GENSHINPY.get('utc_offset')) != int:
+                timezone, utc_offset_str = assert_timezone(server=account.server)
+                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                message += f'📅 {today}\n'
+                date_appended = True
+            message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
+            result.append(message)
 
+        data = {}
         try:
             log.info('Preparing to claim daily reward...')
             reward = await client.claim_daily_reward()
@@ -312,6 +320,8 @@ async def taskgenshinpy(cookie):
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
+        claim_msg = CLAIM_TEMPLATE.format(**data)
+        result.append(claim_msg)
 
         log.info('Preparing to get traveler\'s diary...')
         diary = await client.get_diary()
@@ -320,9 +330,8 @@ async def taskgenshinpy(cookie):
             'current_primogems': diary.data.current_primogems,
             'current_mora': diary.data.current_mora
         }
-        data['addons'] += DIARY_TEMPLATE.format(**diary_data)
-        message = MESSAGE_TEMPLATE.format(**data)
-        result.append(message)
+        daily_addons = DIARY_TEMPLATE.format(**diary_data)
+        result.append(daily_addons)
     finally:
         # await client.close()
         log.info('Task finished.')
