@@ -101,6 +101,28 @@ def assert_timezone(server=None, conf=config.GENSHINPY):
     return timezone, utc_offset_str
 
 
+def get_genshinpy_accounts(accounts, uids):
+    got_accounts = []
+    for _uid in uids:
+        _uid = int(_uid)
+        got_uid = False
+        # we always loop through all accounts to make the returned accounts
+        # match the order of the desired uids in config
+        for a in accounts:
+            if a.uid == _uid:
+                got_accounts.append(a)
+                got_uid = True
+                break
+        if not got_uid:
+            log.info(f"Could not find account matching UID {_uid}.")
+
+    if got_accounts:
+        return got_accounts
+    else:
+        log.info(f"Could not find any account matching UIDs {uids}.")
+        return False
+
+
 def seconds_to_time(seconds):
     seconds = int(seconds)
     if seconds < 0:
@@ -126,7 +148,7 @@ def display_time(time, short=False):
     for i, name in enumerate(order):
         value = time[name]
         if type(value) == int and value > 0:
-            prepend = 'and ' if i == len(order) -1 and len(result) > 0 else ''
+            prepend = 'and ' if i == len(order) - 1 and result else ''
             unit = name[0] if short else (name + 's' if value != 1 else '')
             result.append('{}{} {}'.format(prepend, value, unit))
     return ' '.join(result)
@@ -259,7 +281,7 @@ async def taskgenshinpy(cookie):
 
         log.info('Preparing to get user game roles information...')
         accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
-        if len(accounts) < 1:
+        if not accounts:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
         DIARY_TEMPLATE = '''    Traveler's Diary: {month}
@@ -271,21 +293,11 @@ async def taskgenshinpy(cookie):
     Status: {status}
 '''
 
-        got_accounts = []
+        got_accounts = None
         if config.GENSHINPY.get('uids'):
             uids = config.GENSHINPY.get('uids').split('#')
-            for _uid in uids:
-                _uid = int(_uid)
-                got_uid = False
-                for a in accounts:
-                    if a.uid == _uid:
-                        got_accounts.append(a)
-                        got_uid = True
-                        break
-                if not got_uid:
-                    log.info(f"Could not find account matching UID {_uid}.")
+            got_accounts = get_genshinpy_accounts(accounts, uids)
             if not got_accounts:
-                log.info(f"Could not find any account matching UIDs {uids}.")
                 return
         else:
             got_accounts = accounts
@@ -320,8 +332,8 @@ async def taskgenshinpy(cookie):
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
-        claim_msg = CLAIM_TEMPLATE.format(**data)
-        result.append(claim_msg)
+        claim_message = CLAIM_TEMPLATE.format(**data)
+        result.append(claim_message)
 
         log.info('Preparing to get traveler\'s diary...')
         diary = await client.get_diary()
@@ -346,35 +358,34 @@ async def taskgenshinpyhonkai(cookie):
 
         log.info('Preparing to get user game roles information...')
         accounts = list(filter(lambda account: 'bh3' in account.game_biz, await client.get_game_accounts()))
-        if len(accounts) < 1:
+        if not accounts:
             return log.info("There are no Honkai accounts associated to this HoYoverse account.")
 
-        MESSAGE_TEMPLATE = '''📅 {today}
-🔅 {nickname} {server_name} Lv. {level}
-    Today's reward: {name} x {amount}
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
-        account = {}
+        got_accounts = None
         if config.GENSHINPY_HONKAI.get('uids'):
-            first_uid = int(config.GENSHINPY_HONKAI.get('uids').split('#')[0])
-            for a in accounts:
-                if a.uid == first_uid:
-                    account = a
-            if not account:
-                log.info(f"Could not find account matching UID {first_uid}.")
+            uids = config.GENSHINPY_HONKAI.get('uids').split('#')
+            got_accounts = get_genshinpy_accounts(accounts, uids)
+            if not got_accounts:
                 return
         else:
-            account = accounts[0]
+            got_accounts = accounts
 
-        timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_HONKAI)
-        data = {
-            'today': f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
-            'nickname': account.nickname,
-            'server_name': account.server_name,
-            'level': account.level,
-        }
+        date_appended = False
+        for account in got_accounts:
+            message = ''
+            if not date_appended or type(config.GENSHINPY_HONKAI.get('utc_offset')) != int:
+                timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_HONKAI)
+                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                message += f'📅 {today}\n'
+                date_appended = True
+            message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
+            result.append(message)
 
+        data = {}
         try:
             log.info('Preparing to claim daily reward...')
             reward = await client.claim_daily_reward()
@@ -392,8 +403,8 @@ async def taskgenshinpyhonkai(cookie):
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
-        message = MESSAGE_TEMPLATE.format(**data)
-        result.append(message)
+        claim_message = CLAIM_TEMPLATE.format(**data)
+        result.append(claim_message)
     finally:
         # await client.close()
         log.info('Task finished.')
@@ -607,7 +618,7 @@ async def job2genshinpy():
 
             log.info('Preparing to get user game roles information...')
             accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
-            if len(accounts) < 1:
+            if not accounts:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
             expedition_fmt = '└─ {character_name:<10} {expedition_status}'
@@ -629,16 +640,16 @@ async def job2genshinpy():
             TRANSFORMER_TEMPLATE = '''{until_transformer_recovery_fmt}
      └─ {until_transformer_recovery_date_fmt}'''
 
-            uids = []
-            if (config.GENSHINPY.get('uids')):
-                for uid in config.GENSHINPY.get('uids').split('#'):
-                    uids.append(int(uid))
+            got_accounts = None
+            if config.GENSHINPY.get('uids'):
+                uids = config.GENSHINPY.get('uids').split('#')
+                got_accounts = get_genshinpy_accounts(accounts, uids)
+                if not got_accounts:
+                    return
+            else:
+                got_accounts = accounts
 
-            for account in accounts:
-                if len(uids) > 0 and account.uid not in uids:
-                    log.info(f"Skipped notes for UID {account.uid}.")
-                    continue
-
+            for account in got_accounts:
                 log.info(f"Preparing to get notes information for UID {account.uid}...")
                 notes = await client.get_notes(account.uid)
 
@@ -741,7 +752,7 @@ async def job2genshinpy():
                 data['expedition_details'] = '\n     '.join(details)
 
                 message = RESIN_TIMER_TEMPLATE.format(**data)
-                if len(details) > 0:
+                if details:
                     message += '\n     '.join([''] + details)
                 result.append(message)
                 log.info(message)
