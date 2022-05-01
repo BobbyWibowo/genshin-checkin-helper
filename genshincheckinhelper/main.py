@@ -302,6 +302,9 @@ async def taskgenshinpy(cookie):
         else:
             accounts = _accounts
 
+        # use first uid for api calls that are uid-dependant (e.g. get_diary)
+        client.uid = accounts[0].uid
+
         date_appended = False
         for account in accounts:
             message = ''
@@ -334,7 +337,7 @@ async def taskgenshinpy(cookie):
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
 
-        log.info('Preparing to get traveler\'s diary...')
+        log.info(f'Preparing to get traveler\'s diary for UID {accounts[0].uid}...')
         diary = await client.get_diary()
         diary_data = {
             'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
@@ -371,6 +374,9 @@ async def taskgenshinpyhonkai(cookie):
                 return
         else:
             accounts = _accounts
+
+        # use first uid for api calls that are uid-dependant
+        client.uid = accounts[0].uid
 
         date_appended = False
         for account in accounts:
@@ -648,7 +654,8 @@ async def job2genshinpy():
 
             for account in accounts:
                 log.info(f"Preparing to get notes information for UID {account.uid}...")
-                notes = await client.get_notes(account.uid)
+                client.uid = account.uid
+                notes = await client.get_notes()
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
