@@ -284,7 +284,7 @@ async def taskgenshinpy(cookie):
         if not _accounts:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-        DIARY_TEMPLATE = '''    Traveler's Diary: {month}
+        DIARY_TEMPLATE = '''    {display_name}'s Diary: {month}
     💠 Primogems: {current_primogems}
     🌕 Mora: {current_mora}'''
 
@@ -340,6 +340,7 @@ async def taskgenshinpy(cookie):
         log.info(f'Preparing to get traveler\'s diary for UID {accounts[0].uid}...')
         diary = await client.get_diary()
         diary_data = {
+            'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Traveler',
             'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
             'current_primogems': diary.data.current_primogems,
             'current_mora': diary.data.current_mora
