@@ -344,7 +344,6 @@ async def taskgenshinpy(cookie):
         daily_addons = DIARY_TEMPLATE.format(**diary_data)
         result.append(daily_addons)
     finally:
-        # await client.close()
         log.info('Task finished.')
     return result
 
@@ -405,7 +404,6 @@ async def taskgenshinpyhonkai(cookie):
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
     finally:
-        # await client.close()
         log.info('Task finished.')
     return result
 
@@ -878,7 +876,6 @@ async def job2genshinpy():
         except Exception as e:
             log.exception('EXCEPTION')
         finally:
-            # await client.close()
             log.info('Task finished.')
     return result
 
