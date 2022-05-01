@@ -280,8 +280,8 @@ async def taskgenshinpy(cookie):
         client.set_cookies(cookie)
 
         log.info('Preparing to get user game roles information...')
-        accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
-        if not accounts:
+        _accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
+        if not _accounts:
             return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
         DIARY_TEMPLATE = '''    Traveler's Diary: {month}
@@ -293,17 +293,17 @@ async def taskgenshinpy(cookie):
     Status: {status}
 '''
 
-        got_accounts = None
+        accounts = None
         if config.GENSHINPY.get('uids'):
             uids = config.GENSHINPY.get('uids').split('#')
-            got_accounts = get_genshinpy_accounts(accounts, uids)
-            if not got_accounts:
+            accounts = get_genshinpy_accounts(_accounts, uids)
+            if not accounts:
                 return
         else:
-            got_accounts = accounts
+            accounts = _accounts
 
         date_appended = False
-        for account in got_accounts:
+        for account in accounts:
             message = ''
             if not date_appended or type(config.GENSHINPY.get('utc_offset')) != int:
                 timezone, utc_offset_str = assert_timezone(server=account.server)
@@ -355,25 +355,25 @@ async def taskgenshinpyhonkai(cookie):
         client.set_cookies(cookie)
 
         log.info('Preparing to get user game roles information...')
-        accounts = list(filter(lambda account: 'bh3' in account.game_biz, await client.get_game_accounts()))
-        if not accounts:
+        _accounts = list(filter(lambda account: 'bh3' in account.game_biz, await client.get_game_accounts()))
+        if not _accounts:
             return log.info("There are no Honkai accounts associated to this HoYoverse account.")
 
         CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
     Status: {status}'''
 
-        got_accounts = None
+        accounts = None
         if config.GENSHINPY_HONKAI.get('uids'):
             uids = config.GENSHINPY_HONKAI.get('uids').split('#')
-            got_accounts = get_genshinpy_accounts(accounts, uids)
-            if not got_accounts:
+            accounts = get_genshinpy_accounts(_accounts, uids)
+            if not accounts:
                 return
         else:
-            got_accounts = accounts
+            accounts = _accounts
 
         date_appended = False
-        for account in got_accounts:
+        for account in accounts:
             message = ''
             if not date_appended or type(config.GENSHINPY_HONKAI.get('utc_offset')) != int:
                 timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_HONKAI)
@@ -614,8 +614,8 @@ async def job2genshinpy():
             client.set_cookies(i)
 
             log.info('Preparing to get user game roles information...')
-            accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
-            if not accounts:
+            _accounts = list(filter(lambda account: 'hk4e' in account.game_biz, await client.get_game_accounts()))
+            if not _accounts:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
             expedition_fmt = '└─ {character_name:<10} {expedition_status}'
@@ -637,16 +637,16 @@ async def job2genshinpy():
             TRANSFORMER_TEMPLATE = '''{until_transformer_recovery_fmt}
      └─ {until_transformer_recovery_date_fmt}'''
 
-            got_accounts = None
+            accounts = None
             if config.GENSHINPY.get('uids'):
                 uids = config.GENSHINPY.get('uids').split('#')
-                got_accounts = get_genshinpy_accounts(accounts, uids)
-                if not got_accounts:
+                accounts = get_genshinpy_accounts(_accounts, uids)
+                if not accounts:
                     return
             else:
-                got_accounts = accounts
+                accounts = _accounts
 
-            for account in got_accounts:
+            for account in accounts:
                 log.info(f"Preparing to get notes information for UID {account.uid}...")
                 notes = await client.get_notes(account.uid)
 
