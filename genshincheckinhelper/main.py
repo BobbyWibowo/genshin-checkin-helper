@@ -737,11 +737,10 @@ async def job2genshinpy():
                     if until_transformer_recovery > 0:
                         until_transformer_recovery_time = seconds_to_time(until_transformer_recovery)
                         recovery_date_fmt = '%Y-%m-%d'
-                        if type(until_transformer_recovery_time['hour']) == int and until_transformer_recovery_time['hour'] > 0:
-                            if type(until_transformer_recovery_time['minute']) == int and until_transformer_recovery_time['minute'] > 0:
-                                recovery_date_fmt += ' %I:%M %p'
-                            else:
-                                recovery_date_fmt += ' %I:00 %p'
+                        if until_transformer_recovery_time['minute'] or until_transformer_recovery_time['second']:
+                            recovery_date_fmt += ' %I:%M %p'
+                        elif until_transformer_recovery_time['hour']:
+                            recovery_date_fmt += ' %I:00 %p'
                         if timezone:
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
