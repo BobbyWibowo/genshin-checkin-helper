@@ -139,19 +139,36 @@ def seconds_to_time(seconds):
     }
 
 
-def display_time(time, short=False):
+def display_time(time, short=False, min_units=1, max_units=None):
     if type(time) != dict:
         raise ValueError('Input type must be a dict')
 
-    order = ('day', 'hour', 'minute', 'second')
-    result = []
-    for i, name in enumerate(order):
-        value = time[name]
-        if type(value) == int and value > 0:
-            prepend = 'and ' if i == len(order) - 1 and result else ''
-            unit = name[0] if short else (name + 's' if value != 1 else '')
-            result.append('{}{} {}'.format(prepend, value, unit))
-    return ' '.join(result)
+    units = {
+        # short, singular, plural
+        'day': ('d', 'day', 'days'),
+        'hour': ('h', 'hour', 'hours'),
+        'minute': ('min', 'minute', 'minutes'),
+        'second': ('s', 'second', 'seconds')
+    }
+    units_count = len(units)
+    # if unset, assume no max limit
+    if (max_units == None): max_units = units_count
+
+    results = []
+    done = 0
+    for i, k in enumerate(units):
+        value = time[k] if type(time[k]) == int else 0
+        # if non-zero, OR last unit(s) to satisfy min unit(s)
+        if value or (done < min_units and i >= units_count - min_units):
+            # if there's least 1 non-zero higher unit before this, AND
+            # this is last unit to satisfy min unit(s), OR last unit before capping max unit(s)
+            prepend = 'and ' if results and (i == units_count - 1 or done + 1 >= max_units) else ''
+            unit = units[k][0] if short else (units[k][1] if value == 1 else units[k][2])
+            results.append('{}{} {}'.format(prepend, value, unit))
+            done += 1
+            if (done >= max_units): break
+
+    return ' '.join(results)
 
 
 def task_common(r, d, text_temp1, text_temp2):
@@ -689,7 +706,7 @@ async def job2genshinpy():
                         data['completed_expeditions'] += 1
                     else:
                         remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
-                        expedition_data['expedition_status'] = '({hour} h and {minute} min)'.format(**minutes_to_hours(remaining_time / 60))
+                        expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
                     details.append(expedition_fmt.format(**expedition_data))
@@ -704,7 +721,7 @@ async def job2genshinpy():
                 is_resin_recovery_time_datetime = isinstance(notes.resin_recovery_time, datetime.datetime)
                 if not is_full and is_resin_recovery_time_datetime:
                     until_resin_recovery = (notes.resin_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                    data['until_resin_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_resin_recovery / 60))
+                    data['until_resin_recovery_fmt'] = f'({display_time(seconds_to_time(until_resin_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                     else:
@@ -719,7 +736,7 @@ async def job2genshinpy():
                     is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, datetime.datetime)
                     if not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
                         until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
-                        data['until_realm_currency_recovery_fmt'] = "({hour} h and {minute} min)".format(**minutes_to_hours(until_realm_currency_recovery / 60))
+                        data['until_realm_currency_recovery_fmt'] = f'({display_time(seconds_to_time(until_realm_currency_recovery), short=True, min_units=2, max_units=2)})'
                         if timezone:
                             data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                         else:
@@ -745,7 +762,8 @@ async def job2genshinpy():
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
-                        data['until_transformer_recovery_fmt'] = display_time(until_transformer_recovery_time, True)
+                        short = until_transformer_recovery <= 120 # if at least 2 minutes left
+                        data['until_transformer_recovery_fmt'] = display_time(time=until_transformer_recovery_time, short=short, max_units=2)
                         data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
                     else:
                         is_transformer_ready = True
