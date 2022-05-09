@@ -762,7 +762,7 @@ async def job2genshinpy():
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
-                        short = until_transformer_recovery < 120 # if less than 2 minutes left
+                        short = until_transformer_recovery < 300 # if less than 5 minutes left
                         data['until_transformer_recovery_fmt'] = display_time(time=until_transformer_recovery_time, short=short, max_units=2)
                         data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
                     else:
