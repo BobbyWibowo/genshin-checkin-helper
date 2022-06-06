@@ -11,6 +11,7 @@ from math import ceil
 # from pprint import pprint
 from random import randint
 from time import sleep
+from typing import Tuple
 import datetime
 import os
 
@@ -140,8 +141,17 @@ def seconds_to_time(seconds):
 
 
 def display_time(time, short=False, min_units=1, max_units=None):
-    if type(time) != dict:
-        raise ValueError('Input type must be a dict')
+    if type(time) != dict and not isinstance(time, Tuple):
+        raise ValueError('Input time must be a dict or Tuple')
+
+    _time = time
+    if isinstance(time, Tuple):
+        _time = {
+            'day': time[0],
+            'hour': time[1],
+            'minute': time[2],
+            'second': time[3]
+        }
 
     units = {
         # short, singular, plural
@@ -157,7 +167,7 @@ def display_time(time, short=False, min_units=1, max_units=None):
     results = []
     done = 0
     for i, k in enumerate(units):
-        value = time[k] if type(time[k]) == int else 0
+        value = _time[k] if type(_time[k]) == int else 0
         # if non-zero, OR last unit(s) to satisfy min unit(s)
         if value or (done < min_units and i >= units_count - min_units):
             # if there's least 1 non-zero higher unit before this, AND
@@ -752,18 +762,17 @@ async def job2genshinpy():
                 if do_transformer:
                     until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds())
                     if until_transformer_recovery > 0:
-                        until_transformer_recovery_time = seconds_to_time(until_transformer_recovery)
                         recovery_date_fmt = '%Y-%m-%d'
-                        if until_transformer_recovery_time['minute'] or until_transformer_recovery_time['second']:
+                        if notes.remaining_transformer_recovery_time.minutes or notes.remaining_transformer_recovery_time.seconds:
                             recovery_date_fmt += ' %I:%M %p'
-                        elif until_transformer_recovery_time['hour']:
+                        elif notes.remaining_transformer_recovery_time.hours:
                             recovery_date_fmt += ' %I:00 %p'
                         if timezone:
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.astimezone(tz=timezone).strftime(recovery_date_fmt)} {utc_offset_str}"
                         else:
                             data['until_transformer_recovery_date_fmt'] = f"Ready at {notes.transformer_recovery_time.strftime(recovery_date_fmt)}"
                         short = until_transformer_recovery < 300 # if less than 5 minutes left
-                        data['until_transformer_recovery_fmt'] = display_time(time=until_transformer_recovery_time, short=short, max_units=2)
+                        data['until_transformer_recovery_fmt'] = display_time(time=notes.remaining_transformer_recovery_time.timedata, short=short, max_units=2)
                         data['transformer'] = TRANSFORMER_TEMPLATE.format(**data)
                     else:
                         is_transformer_ready = True
