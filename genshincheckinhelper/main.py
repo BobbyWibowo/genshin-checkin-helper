@@ -640,6 +640,11 @@ def job2():
     return result
 
 async def job2genshinpy():
+    is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
+    if (config.GENSHINPY.get('suspend_check_resin_during_dnd') and is_do_not_disturb):
+        log.info('Task skipped due to "suspend_check_resin_during_dnd" option.')
+        return
+
     log.info('Starting real-time notes tasks using 「thesadru/genshin.py」...')
     result = []
     for i in get_cookies(config.GENSHINPY.get('cookies')):
@@ -844,8 +849,6 @@ async def job2genshinpy():
                     if until_transformer_recovery:
                         os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(until_transformer_recovery)
                         is_transformer_recovery_time_changed = int(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) < until_transformer_recovery
-
-                is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
 
                 if is_full and is_resin_notify and not is_do_not_disturb:
                     os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)

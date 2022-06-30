@@ -10,7 +10,8 @@
     "cookies": "",
     "uids": "",
     "utc_offset": false,
-    "realm_currency_threshold": -80
+    "realm_currency_threshold": -80,
+    "suspend_check_resin_during_dnd": false
   },
   "GENSHINPY_HONKAI": {
     "cookies": "",
