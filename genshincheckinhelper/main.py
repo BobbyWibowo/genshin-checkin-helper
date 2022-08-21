@@ -43,13 +43,12 @@ banner = f'''
 +----------------------------------------------------------------+
 Project      : genshinhelper
 Description  : More than check-in for Genshin Impact.
-PKG_Version  : {gh.__version__}
-genshin.py   : {genshin.__version__}
-Author       : 银弹GCell(y1ndan)
-Blog         : https://www.yindan.me
-Channel      : https://t.me/genshinhelperupdates
+Authors      : 银弹GCell(y1ndan), Bobby
 ------------------------------------------------------------------'''
 
+# PKG_Version  : {gh.__version__}
+# Blog         : https://www.yindan.me
+# Channel      : https://t.me/genshinhelperupdates
 
 def random_sleep(interval: str):
     seconds = randint(*[int(i) for i in interval.split('-')])
