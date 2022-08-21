@@ -95,7 +95,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "genshin"
-version = "1.2.1"
+version = "1.2.3"
 description = "An API wrapper for Genshin Impact."
 category = "main"
 optional = false
@@ -243,7 +243,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "64ba0670b7ff3319a9db811aba8ea7504e6cc979c11bbf131c71750de568aeea"
+content-hash = "3ea9cc8b30d1ea0e9db292298ffdae56440a5083266af8a2e83bc93e91cb390a"
 
 [metadata.files]
 aiohttp = [
@@ -406,8 +406,8 @@ frozenlist = [
     {file = "frozenlist-1.3.1.tar.gz", hash = "sha256:3a735e4211a04ccfa3f4833547acdf5d2f863bfeb01cfd3edaffbc251f15cec8"},
 ]
 genshin = [
-    {file = "genshin-1.2.1-py3-none-any.whl", hash = "sha256:1985d0715cae5282d25470651eedb4b8dcc0e7093c9c8d53daffe22085137ac1"},
-    {file = "genshin-1.2.1.tar.gz", hash = "sha256:7f837ff8bc258ab44501007560c15e7ecbb5509abd80760c71ea5c1aca670a20"},
+    {file = "genshin-1.2.3-py3-none-any.whl", hash = "sha256:636068068e9934038aec87229a45c82c45e9f879ab931cdcfc30b79a4d829f8f"},
+    {file = "genshin-1.2.3.tar.gz", hash = "sha256:41965f52a7820678fe64eec1c406a9ea0e27862ff74ce421946e7c0542e18c65"},
 ]
 genshinhelper = [
     {file = "genshinhelper-2.0.4-py3-none-any.whl", hash = "sha256:0d717d09bf3b9bdcbf78a9145e13d724a8d228058efd5a5adae2429da193626a"},

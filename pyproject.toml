@@ -10,7 +10,7 @@ genshinhelper = "2.0.4"
 onepush = "1.1.1"
 schedule = "^1.1.0"
 nest-asyncio = "^1.5.5"
-genshin = "1.2.1"
+genshin = "1.2.3"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.2"
 

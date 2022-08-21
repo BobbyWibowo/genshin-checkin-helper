@@ -2,6 +2,6 @@ genshinhelper==2.0.4
 onepush==1.1.1
 schedule
 nest_asyncio
-genshin==1.2.1
+genshin==1.2.3
 aiohttp
 pydantic
