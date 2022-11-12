@@ -95,7 +95,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "genshin"
-version = "1.2.3"
+version = "1.3.0"
 description = "An API wrapper for Genshin Impact."
 category = "main"
 optional = false
@@ -106,14 +106,14 @@ aiohttp = "*"
 pydantic = "*"
 
 [package.extras]
-geetest = ["rsa"]
-cookies = ["browser-cookie3"]
+all = ["browser-cookie3", "rsa", "click"]
 cli = ["click"]
-all = ["click", "rsa", "browser-cookie3"]
+cookies = ["browser-cookie3"]
+geetest = ["rsa"]
 
 [[package]]
 name = "genshinhelper"
-version = "2.0.4"
+version = "2.1.3"
 description = "A Python library for miHoYo bbs and HoYoLAB Community."
 category = "main"
 optional = false
@@ -141,7 +141,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "nest-asyncio"
-version = "1.5.5"
+version = "1.5.6"
 description = "Patch asyncio to allow nested event loops"
 category = "main"
 optional = false
@@ -243,7 +243,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3ea9cc8b30d1ea0e9db292298ffdae56440a5083266af8a2e83bc93e91cb390a"
+content-hash = "17f935f6533b12e483bb73ea36401fec7efcfbed935a29d33dadee0ba3ee54f2"
 
 [metadata.files]
 aiohttp = [
@@ -406,12 +406,12 @@ frozenlist = [
     {file = "frozenlist-1.3.1.tar.gz", hash = "sha256:3a735e4211a04ccfa3f4833547acdf5d2f863bfeb01cfd3edaffbc251f15cec8"},
 ]
 genshin = [
-    {file = "genshin-1.2.3-py3-none-any.whl", hash = "sha256:636068068e9934038aec87229a45c82c45e9f879ab931cdcfc30b79a4d829f8f"},
-    {file = "genshin-1.2.3.tar.gz", hash = "sha256:41965f52a7820678fe64eec1c406a9ea0e27862ff74ce421946e7c0542e18c65"},
+    {file = "genshin-1.3.0-py3-none-any.whl", hash = "sha256:67a90bee9543106534e6180813c48b74007a513a5fdb6f69c299efaa73c909c6"},
+    {file = "genshin-1.3.0.tar.gz", hash = "sha256:7c133f6152a5725b049cb098ce8eedb5972f143d254a8bc214b8604abedec920"},
 ]
 genshinhelper = [
-    {file = "genshinhelper-2.0.4-py3-none-any.whl", hash = "sha256:0d717d09bf3b9bdcbf78a9145e13d724a8d228058efd5a5adae2429da193626a"},
-    {file = "genshinhelper-2.0.4.tar.gz", hash = "sha256:1b9e6489baefd15492a7bc000880a2f59e3bcf6877f8da685a1f424a1dde237e"},
+    {file = "genshinhelper-2.1.3-py3-none-any.whl", hash = "sha256:c44916dec570edb3302260a594d990d84657f92d96cecf35534ab5c56d9c4eed"},
+    {file = "genshinhelper-2.1.3.tar.gz", hash = "sha256:fd4f07e63a4381d7b8435e0f2fa172f425e52e4eec10e0b4dc11b2e31cd9f6fd"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
@@ -479,8 +479,8 @@ multidict = [
     {file = "multidict-6.0.2.tar.gz", hash = "sha256:5ff3bd75f38e4c43f1f470f2df7a4d430b821c4ce22be384e1459cb57d6bb013"},
 ]
 nest-asyncio = [
-    {file = "nest_asyncio-1.5.5-py3-none-any.whl", hash = "sha256:b98e3ec1b246135e4642eceffa5a6c23a3ab12c82ff816a92c612d68205813b2"},
-    {file = "nest_asyncio-1.5.5.tar.gz", hash = "sha256:e442291cd942698be619823a17a86a5759eabe1f8613084790de189fe9e16d65"},
+    {file = "nest_asyncio-1.5.6-py3-none-any.whl", hash = "sha256:b9a953fb40dceaa587d109609098db21900182b16440652454a146cffb06e8b8"},
+    {file = "nest_asyncio-1.5.6.tar.gz", hash = "sha256:d267cc1ff794403f7df692964d1d2a3fa9418ffea2a3f6859a439ff482fef290"},
 ]
 onepush = [
     {file = "onepush-1.1.1-py3-none-any.whl", hash = "sha256:83789d090b9baa65b2c188a0ecc23ed36513423036be095999eb511da6dcd838"},
