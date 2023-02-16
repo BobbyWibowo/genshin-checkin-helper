@@ -796,7 +796,7 @@ async def job2genshinpy():
                 content = f'```\n{message}```' if is_markdown else message
                 status = 'Push conditions have not been met yet, will re-check later as scheduled.'
 
-                count = 5
+                count = 3
                 IS_NOTIFY_STR = f"UID_{account.uid}_IS_NOTIFY_STR"
                 RESIN_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_NOTIFY_CNT"
                 RESIN_THRESHOLD_NOTIFY_CNT_STR = f"UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT"
