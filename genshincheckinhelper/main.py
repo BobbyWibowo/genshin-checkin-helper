@@ -440,6 +440,69 @@ async def taskgenshinpyhonkai(cookie):
         log.info('Task finished.')
     return result
 
+async def taskgenshinpystarrail(cookie):
+    try:
+        result = []
+
+        client = genshin.Client(game=genshin.Game.STARRAIL)
+        client.set_cookies(cookie)
+
+        log.info('Preparing to get user game roles information...')
+        _accounts = list(filter(lambda account: 'hkrpg' in account.game_biz, await client.get_game_accounts()))
+        if not _accounts:
+            return log.info("There are no Star Rail accounts associated to this HoYoverse account.")
+
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} day(s)
+    Status: {status}'''
+
+        accounts = None
+        if config.GENSHINPY_STARRAIL.get('uids'):
+            uids = config.GENSHINPY_STARRAIL.get('uids').split('#')
+            accounts = get_genshinpy_accounts(_accounts, uids)
+            if not accounts:
+                return
+        else:
+            accounts = _accounts
+
+        # use first uid for api calls that are uid-dependant
+        client.uid = accounts[0].uid
+
+        date_appended = False
+        for account in accounts:
+            message = ''
+            if not date_appended or type(config.GENSHINPY_STARRAIL.get('utc_offset')) != int:
+                timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_STARRAIL)
+                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                message += f'📅 {today}\n'
+                date_appended = True
+            message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
+            result.append(message)
+
+        data = {}
+        try:
+            log.info('Preparing to claim daily reward...')
+            reward = await client.claim_daily_reward()
+        except genshin.AlreadyClaimed:
+            log.info('Preparing to get claimed reward information...')
+            claimed = await client.claimed_rewards(limit=1)
+            data['status'] = '👀 You have already checked-in'
+            data['name'] = claimed[0].name
+            data['amount'] = claimed[0].amount
+        else:
+            data['status'] = 'OK'
+            data['name'] = reward.name
+            data['amount'] = reward.amount
+
+        log.info('Preparing to get monthly rewards information...')
+        reward_info = await client.get_reward_info()
+        data['claimed_rewards'] = reward_info.claimed_rewards
+        claim_message = CLAIM_TEMPLATE.format(**data)
+        result.append(claim_message)
+    finally:
+        log.info('Task finished.')
+    return result
+
 task_list = [{
     'name': 'HoYoLAB Community',
     'cookies': get_cookies(config.COOKIE_HOYOLAB),
@@ -480,6 +543,10 @@ task_list = [{
     'name': 'thesadru/genshin.py-honkai',
     'cookies': get_cookies(config.GENSHINPY_HONKAI.get('cookies')),
     'function': taskgenshinpyhonkai
+}, {
+    'name': 'thesadru/genshin.py-starrail',
+    'cookies': get_cookies(config.GENSHINPY_STARRAIL.get('cookies')),
+    'function': taskgenshinpystarrail
 }]
 
 
