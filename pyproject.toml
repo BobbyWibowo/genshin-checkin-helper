@@ -10,7 +10,7 @@ genshinhelper = "2.1.3"
 onepush = "1.1.1"
 schedule = "^1.1.0"
 nest-asyncio = "^1.5.6"
-genshin = { git = "https://github.com/thesadru/genshin.py.git", rev = "263d2412caca302089b35ef4c5abb6184a384d91" }
+genshin = { git = "https://github.com/thesadru/genshin.py.git", rev = "95d0649d13c02c51f6b7487c5eea2ae940fb50a4" }
 aiohttp = "^3.8.1"
 pydantic = "^1.9.2"
 
