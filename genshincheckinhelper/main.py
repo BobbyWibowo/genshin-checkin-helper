@@ -36,14 +36,15 @@ import genshin # thesadru/genshin.py
 import nest_asyncio
 nest_asyncio.apply()
 
-version = '1.0.3-genshin.py'
+version = '1.2.0'
 banner = f'''
 +----------------------------------------------------------------+
 |         𒆙  Genshin Check-In Helper v{version}           |
 +----------------------------------------------------------------+
-Project      : genshinhelper
+Project      : genshin-checkin-helper
 Description  : More than check-in for Genshin Impact.
 Authors      : 银弹GCell(y1ndan), Bobby
+Library      : thesadru/genshin.py
 ------------------------------------------------------------------'''
 
 # PKG_Version  : {gh.__version__}
@@ -412,15 +413,15 @@ task_list = [{
     'cookies': get_cookies(config.COOKIE_HOYOLAB),
     'function': taskhoyolab
 }, {
-    'name': 'thesadru/genshin.py',
+    'name': 'Genshin Impact',
     'cookies': get_cookies(config.GENSHINPY.get('cookies')),
     'function': taskgenshinpy
 }, {
-    'name': 'thesadru/genshin.py-honkai',
+    'name': 'Honkai Impact 3',
     'cookies': get_cookies(config.GENSHINPY_HONKAI.get('cookies')),
     'function': taskgenshinpyhonkai
 }, {
-    'name': 'thesadru/genshin.py-starrail',
+    'name': 'Honkai: Star Rail',
     'cookies': get_cookies(config.GENSHINPY_STARRAIL.get('cookies')),
     'function': taskgenshinpystarrail
 }]
@@ -494,12 +495,12 @@ async def job1():
 
 
 async def job2genshinpy():
-    is_do_not_disturb = time_in_range(config.RESIN_TIMER_DO_NOT_DISTURB)
-    if (config.GENSHINPY.get('suspend_check_resin_during_dnd') and is_do_not_disturb):
-        log.info('Task skipped due to "suspend_check_resin_during_dnd" option.')
+    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
+    if (config.GENSHINPY.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
-    log.info('Starting real-time notes tasks using 「thesadru/genshin.py」...')
+    log.info('Starting real-time notes tasks for Genshin Impact...')
     result = []
     for i in get_cookies(config.GENSHINPY.get('cookies')):
         try:
@@ -511,8 +512,8 @@ async def job2genshinpy():
             if not _accounts:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-            expedition_fmt = '└─ {character_name:<10} {expedition_status}'
-            RESIN_TIMER_TEMPLATE = '''🏆 thesadru/genshin.py
+            expedition_fmt = '└─ {character_name:<19} {expedition_status}'
+            RESIN_TIMER_TEMPLATE = '''🏆 Genshin Impact
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
@@ -542,7 +543,7 @@ async def job2genshinpy():
             for account in accounts:
                 log.info(f"Preparing to get notes information for UID {account.uid}...")
                 client.uid = account.uid
-                notes = await client.get_notes()
+                notes = await client.get_genshin_notes()
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
@@ -569,7 +570,9 @@ async def job2genshinpy():
                 details = []
                 earliest_expedition = False
                 for expedition in notes.expeditions:
-                    expedition_data = { 'character_name': expedition.character.name }
+                    expedition_data = {
+                        'character_name': (expedition.character.name[:18] + '…') if len(expedition.character.name) > 19 else expedition.character.name
+                    }
                     if expedition.finished:
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
@@ -669,7 +672,8 @@ async def job2genshinpy():
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
 
-                is_threshold = notes.current_resin >= int(config.RESIN_THRESHOLD)
+                resin_threshold = int(config.GENSHINPY.get('resin_threshold') or 140)
+                is_threshold = notes.current_resin >= resin_threshold
                 is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
                 is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_resin_recovery_time_changed = False
@@ -683,7 +687,7 @@ async def job2genshinpy():
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
                     try:
-                        realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold'))
+                        realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold') or -80)
                         if realm_currency_threshold < 0:
                             is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
                         else:
@@ -771,6 +775,172 @@ async def job2genshinpy():
     return result
 
 
+async def job2genshinpystarrail():
+    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
+    if (config.GENSHINPY_STARRAIL.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
+        return
+
+    log.info('Starting real-time notes tasks for Honkai: Star Rail...')
+    result = []
+    for i in get_cookies(config.GENSHINPY_STARRAIL.get('cookies')):
+        try:
+            client = genshin.Client(game=genshin.Game.STARRAIL)
+            client.set_cookies(i)
+
+            log.info('Preparing to get user game roles information...')
+            _accounts = list(filter(lambda account: 'hkrpg' in account.game_biz, await client.get_game_accounts()))
+            if not _accounts:
+                return log.info("There are no Star Rail accounts associated to this HoYoverse account.")
+
+            expedition_fmt = '└─ {expedition_name:<19} {expedition_status}'
+            STAMINA_TIMER_TEMPLATE = '''🏆 Honkai: Star Rail
+☁️ Real-Time Notes
+📅 {today}
+🔅 {nickname} {server_name} Lv. {level}
+    Trailblaze Power: {current_stamina} / {max_stamina} {until_stamina_recovery_fmt}
+     └─ {until_stamina_recovery_date_fmt}
+    Assignment Execution: {completed_expeditions} / {total_expeditions_num}'''
+
+            accounts = None
+            if config.GENSHINPY_STARRAIL.get('uids'):
+                uids = config.GENSHINPY_STARRAIL.get('uids').split('#')
+                accounts = get_genshinpy_accounts(_accounts, uids)
+                if not accounts:
+                    return
+            else:
+                accounts = _accounts
+
+            for account in accounts:
+                log.info(f"Preparing to get notes information for UID {account.uid}...")
+                client.uid = account.uid
+                notes = await client.get_starrail_notes()
+
+                timezone, utc_offset_str = assert_timezone(server=account.server)
+                data = {
+                    'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                    'nickname': account.nickname,
+                    'server_name': account.server_name,
+                    'level': account.level,
+                    'current_stamina': notes.current_stamina,
+                    'max_stamina': notes.max_stamina,
+                    'until_stamina_recovery_fmt': '',
+                    'completed_expeditions': 0,
+                    'total_expeditions_num': notes.total_expedition_num
+                }
+
+                details = []
+                earliest_expedition = False
+                for expedition in notes.expeditions:
+                    expedition_data = {
+                        'expedition_name': (expedition.name[:18] + '…') if len(expedition.name) > 19 else expedition.name
+                    }
+                    if expedition.finished:
+                        expedition_data['expedition_status'] = '✨ Completed!'
+                        data['completed_expeditions'] += 1
+                    else:
+                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                        expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
+                        if not earliest_expedition or expedition.completion_time < earliest_expedition:
+                            earliest_expedition = expedition.completion_time
+                    details.append(expedition_fmt.format(**expedition_data))
+
+                if earliest_expedition:
+                    if timezone:
+                        details.append(f"└─ Earliest at {earliest_expedition.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}")
+                    else:
+                        details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
+
+                is_full = notes.current_stamina >= notes.max_stamina
+                is_stamina_recovery_time_timedelta = isinstance(notes.stamina_recover_time, datetime.timedelta)
+
+                stamina_recovery_time = None
+                if is_stamina_recovery_time_timedelta:
+                    stamina_recovery_time = datetime.datetime.now() + notes.stamina_recover_time
+
+                if not is_full and stamina_recovery_time:
+                    until_stamina_recovery = notes.stamina_recover_time.total_seconds()
+                    data['until_stamina_recovery_fmt'] = f'({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
+                    if timezone:
+                        data['until_stamina_recovery_date_fmt'] = f"Full at {stamina_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                    else:
+                        data['until_stamina_recovery_date_fmt'] = f"Full at {stamina_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
+                else:
+                    data['until_stamina_recovery_date_fmt'] = '✨ Full!'
+
+                data['expedition_details'] = '\n     '.join(details)
+
+                message = STAMINA_TIMER_TEMPLATE.format(**data)
+                if details:
+                    message += '\n     '.join([''] + details)
+                result.append(message)
+                log.info(message)
+
+                is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
+                content = f'```\n{message}```' if is_markdown else message
+                status = 'Push conditions have not been met yet, will re-check later as scheduled.'
+
+                count = 3
+                IS_NOTIFY_STR = f"UID_SR_{account.uid}_IS_NOTIFY_STR"
+                STAMINA_NOTIFY_CNT_STR = f"UID_SR_{account.uid}_STAMINA_NOTIFY_CNT"
+                STAMINA_THRESHOLD_NOTIFY_CNT_STR = f"UID_SR_{account.uid}_STAMINA_THRESHOLD_NOTIFY_CNT"
+                STAMINA_LAST_RECOVERY_TIME = f"UID_SR_{account.uid}_STAMINA_LAST_RECOVERY_TIME"
+                EXPEDITION_NOTIFY_CNT_STR = f"UID_SR_{account.uid}_EXPEDITION_NOTIFY_CNT"
+
+                is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
+                os.environ[IS_NOTIFY_STR] = 'False'
+                os.environ[STAMINA_NOTIFY_CNT_STR] = os.environ[STAMINA_NOTIFY_CNT_STR] if os.environ.get(STAMINA_NOTIFY_CNT_STR) else '0'
+                os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(STAMINA_THRESHOLD_NOTIFY_CNT_STR) else '0'
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
+
+                stamina_threshold = int(config.GENSHINPY_STARRAIL.get('stamina_threshold') or 150)
+                is_threshold = notes.current_stamina >= stamina_threshold
+                is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) < count
+                is_stamina_threshold_notify = int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) < 1
+                is_stamina_recovery_time_changed = False
+                if stamina_recovery_time:
+                    os.environ[STAMINA_LAST_RECOVERY_TIME] = os.environ[STAMINA_LAST_RECOVERY_TIME] if os.environ.get(STAMINA_LAST_RECOVERY_TIME) else str(stamina_recovery_time.timestamp())
+                    is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - stamina_recovery_time.timestamp()) > 400
+                is_any_expedition_completed = data['completed_expeditions'] > 0
+
+                if is_full and is_stamina_notify and not is_do_not_disturb:
+                    os.environ[STAMINA_NOTIFY_CNT_STR] = str(int(os.environ[STAMINA_NOTIFY_CNT_STR]) + 1)
+                    status = f'Trailblaze Power is full! ({os.environ[STAMINA_NOTIFY_CNT_STR]}/{count})'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_threshold and is_stamina_threshold_notify and not is_do_not_disturb:
+                    status = 'Trailblaze Power is almost full!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                    os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+                elif is_stamina_recovery_time_changed and not is_full:
+                    status = 'Trailblaze Power\'s recovery time has changed!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+                    os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
+                    status = f"Assignment{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_first_run:
+                    status = 'Real-Time Notes is being monitored!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+
+                os.environ[STAMINA_NOTIFY_CNT_STR] = os.environ[STAMINA_NOTIFY_CNT_STR] if is_full else '0'
+                os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
+                if stamina_recovery_time:
+                    os.environ[STAMINA_LAST_RECOVERY_TIME] = str(stamina_recovery_time.timestamp())
+                os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
+
+                title = status
+                log.info(title)
+                if os.environ[IS_NOTIFY_STR] == 'True':
+                    notify_me(title, content)
+        except genshin.GenshinException as e:
+            log.info(e)
+        except Exception as e:
+            log.exception('EXCEPTION')
+        finally:
+            log.info('Task finished.')
+    return result
+
+
 def schedulecatch(func):
     try:
         asyncio.get_event_loop().run_until_complete(func())
@@ -787,6 +957,8 @@ async def run_once():
         gh.set_lang(config.LANGUAGE)
         if config.GENSHINPY.get('cookies'):
             await job2genshinpy()
+        if config.GENSHINPY_STARRAIL.get('cookies'):
+            await job2genshinpystarrail()
         await job1()
     except Exception as e:
         print(e)
@@ -798,13 +970,17 @@ async def main():
 
     schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
 
-    if config.CHECK_RESIN_SECS_RANGE:
-        t1, t2 = config.CHECK_RESIN_SECS_RANGE.split('-')
+    if config.CHECK_NOTES_SECS_RANGE:
+        t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
         if config.GENSHINPY.get('cookies'):
             schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpy))
+        if config.GENSHINPY_STARRAIL.get('cookies'):
+            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
     else:
         if config.GENSHINPY.get('cookies'):
-            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
+            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
+        if config.GENSHINPY_STARRAIL.get('cookies'):
+            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
 
     while True:
         await asyncio.sleep(1)

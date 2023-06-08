@@ -2,14 +2,14 @@
   "LANGUAGE": "en",
   "RANDOM_SLEEP_SECS_RANGE": "0-300",
   "CHECK_IN_TIME": "06:00",
-  "CHECK_RESIN_SECS": 900,
-  "CHECK_RESIN_SECS_RANGE": "480-960",
-  "RESIN_THRESHOLD": 140,
-  "RESIN_TIMER_DO_NOT_DISTURB": "23:00-07:00",
+  "CHECK_NOTES_SECS": 900,
+  "CHECK_NOTES_SECS_RANGE": "480-960",
+  "NOTES_TIMER_DO_NOT_DISTURB": "23:00-07:00",
   "GENSHINPY": {
     "cookies": "",
     "uids": "",
     "utc_offset": false,
+    "resin_threshold": 140,
     "realm_currency_threshold": -80,
     "suspend_check_resin_during_dnd": false
   },
@@ -21,26 +21,10 @@
   "GENSHINPY_STARRAIL": {
     "cookies": "",
     "uids": "",
-    "utc_offset": false
+    "utc_offset": false,
+    "power_threshold": 150,
+    "suspend_check_resin_during_dnd": false
   },
-  "CLOUD_GENSHIN": [
-    {
-      "x-rpc-combo_token": "ai=x;ci=x;oi=xxxxxx;ct=xxxxxx;si=xxxxxx;bi=xxxxxx",
-      "x-rpc-client_type": "",
-      "x-rpc-app_version": "",
-      "x-rpc-sys_version": "",
-      "x-rpc-channel": "mihoyo",
-      "x-rpc-device_id": "",
-      "x-rpc-device_name": "",
-      "x-rpc-device_model": "",
-      "x-rpc-app_id": "",
-      "Referer": "https://app.mihoyo.com",
-      "Host": "api-cloudgame.mihoyo.com",
-      "Connection": "Keep-Alive",
-      "Accept-Encoding": "gzip",
-      "User-Agent": "okhttp/3.14.9"
-    }
-  ],
   "COOKIE_HOYOLAB": "",
   "SHOPTOKEN": "",
   "ONEPUSH": {
