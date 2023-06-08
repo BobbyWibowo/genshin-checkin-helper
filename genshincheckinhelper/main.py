@@ -800,13 +800,9 @@ async def main():
 
     if config.CHECK_RESIN_SECS_RANGE:
         t1, t2 = config.CHECK_RESIN_SECS_RANGE.split('-')
-        if config.COOKIE_RESIN_TIMER:
-            schedule.every(int(t1)).to(int(t2)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
             schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpy))
     else:
-        if config.COOKIE_RESIN_TIMER:
-            schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(job2)
         if config.GENSHINPY.get('cookies'):
             schedule.every(int(config.CHECK_RESIN_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
 
