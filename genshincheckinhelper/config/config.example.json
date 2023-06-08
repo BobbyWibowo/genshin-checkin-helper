@@ -23,10 +23,6 @@
     "uids": "",
     "utc_offset": false
   },
-  "COOKIE_MIHOYOBBS": "",
-  "COOKIE_RESIN_TIMER": "",
-  "COOKIE_BH3": "",
-  "COOKIE_MIYOUBI": "",
   "CLOUD_GENSHIN": [
     {
       "x-rpc-combo_token": "ai=x;ci=x;oi=xxxxxx;ct=xxxxxx;si=xxxxxx;bi=xxxxxx",
@@ -46,8 +42,6 @@
     }
   ],
   "COOKIE_HOYOLAB": "",
-  "COOKIE_WEIBO": "",
-  "COOKIE_KA": "",
   "SHOPTOKEN": "",
   "ONEPUSH": {
     "notifier": "",
