@@ -852,19 +852,14 @@ async def job2genshinpystarrail():
                         details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
                 is_full = notes.current_stamina >= notes.max_stamina
-                is_stamina_recovery_time_timedelta = isinstance(notes.stamina_recover_time, datetime.timedelta)
-
-                stamina_recovery_time = None
-                if is_stamina_recovery_time_timedelta:
-                    stamina_recovery_time = datetime.datetime.now() + notes.stamina_recover_time
-
-                if not is_full and stamina_recovery_time:
-                    until_stamina_recovery = notes.stamina_recover_time.total_seconds()
+                is_stamina_recovery_time_datetime = isinstance(notes.stamina_recovery_time, datetime.datetime)
+                if not is_full and is_stamina_recovery_time_datetime:
+                    until_stamina_recovery = (notes.stamina_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
                     data['until_stamina_recovery_fmt'] = f'({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
-                        data['until_stamina_recovery_date_fmt'] = f"Full at {stamina_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                        data['until_stamina_recovery_date_fmt'] = f"Full at {notes.stamina_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
                     else:
-                        data['until_stamina_recovery_date_fmt'] = f"Full at {stamina_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
+                        data['until_stamina_recovery_date_fmt'] = f"Full at {notes.stamina_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                 else:
                     data['until_stamina_recovery_date_fmt'] = '✨ Full!'
 
@@ -898,9 +893,9 @@ async def job2genshinpystarrail():
                 is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) < count
                 is_stamina_threshold_notify = int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_stamina_recovery_time_changed = False
-                if stamina_recovery_time:
-                    os.environ[STAMINA_LAST_RECOVERY_TIME] = os.environ[STAMINA_LAST_RECOVERY_TIME] if os.environ.get(STAMINA_LAST_RECOVERY_TIME) else str(stamina_recovery_time.timestamp())
-                    is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - stamina_recovery_time.timestamp()) > 400
+                if is_stamina_recovery_time_datetime:
+                    os.environ[STAMINA_LAST_RECOVERY_TIME] = os.environ[STAMINA_LAST_RECOVERY_TIME] if os.environ.get(STAMINA_LAST_RECOVERY_TIME) else str(notes.stamina_recovery_time.timestamp())
+                    is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - notes.stamina_recovery_time.timestamp()) > 400
                 is_any_expedition_completed = data['completed_expeditions'] > 0
 
                 if is_full and is_stamina_notify and not is_do_not_disturb:
@@ -924,8 +919,8 @@ async def job2genshinpystarrail():
 
                 os.environ[STAMINA_NOTIFY_CNT_STR] = os.environ[STAMINA_NOTIFY_CNT_STR] if is_full else '0'
                 os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-                if stamina_recovery_time:
-                    os.environ[STAMINA_LAST_RECOVERY_TIME] = str(stamina_recovery_time.timestamp())
+                if is_stamina_recovery_time_datetime:
+                    os.environ[STAMINA_LAST_RECOVERY_TIME] = str(notes.stamina_recovery_time.timestamp())
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
 
                 title = status
