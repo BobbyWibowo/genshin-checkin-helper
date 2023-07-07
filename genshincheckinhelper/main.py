@@ -234,7 +234,7 @@ async def claim_genshin_daily_reward(client: genshin.Client, challenge=None):
                 log.info('GeeTest captcha solved, preparing to re-claim daily reward...')
                 data = await claim_genshin_daily_reward(client=client, challenge=token)
             else:
-                log.info('GeeTest captcha solver failed ({solver.error_code}), skipping...')
+                log.info(f'GeeTest captcha solver failed ({solver.error_code}), skipping...')
                 data['status'] = '🙁 GeeTest solver failed'
         else:
             data['status'] = '🙁 GeeTest captcha triggered'
