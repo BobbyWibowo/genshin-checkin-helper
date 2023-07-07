@@ -12,7 +12,7 @@ from math import ceil
 from random import randint
 from time import sleep
 from typing import Tuple
-import datetime
+import datetime as dt
 import os
 
 import schedule
@@ -59,9 +59,9 @@ def random_sleep(interval: str):
 
 def time_in_range(interval: str):
     t1, t2 = interval.split('-')
-    now_time = datetime.datetime.now().time()
-    start = datetime.datetime.strptime(t1, '%H:%M').time()
-    end = datetime.datetime.strptime(t2, '%H:%M').time()
+    now_time = dt.datetime.now().time()
+    start = dt.datetime.strptime(t1, '%H:%M').time()
+    end = dt.datetime.strptime(t2, '%H:%M').time()
     result = start <= now_time or now_time <= end
     if start <= end:
         result = start <= now_time <= end
@@ -97,7 +97,7 @@ def assert_timezone(server=None, conf=config.GENSHINPY):
     elif type(server) == str and server_utc_offset[server]:
         display_utc_offset = server_utc_offset[server]
 
-    timezone = datetime.timezone(datetime.timedelta(hours=display_utc_offset))
+    timezone = dt.timezone(dt.timedelta(hours=display_utc_offset))
     utc_offset_str = f"UTC{'+' if display_utc_offset >= 0 else ''}{display_utc_offset}"
     return timezone, utc_offset_str
 
@@ -230,7 +230,7 @@ async def taskgenshinpy(cookie):
         else:
             accounts = _accounts
 
-        # use first uid for api calls that are uid-dependant (e.g. get_diary)
+        # use first uid for api calls that are uid-dependant (e.g. get_genshin_diary)
         client.uid = accounts[0].uid
 
         date_appended = False
@@ -238,7 +238,7 @@ async def taskgenshinpy(cookie):
             message = ''
             if not date_appended or type(config.GENSHINPY.get('utc_offset')) != int:
                 timezone, utc_offset_str = assert_timezone(server=account.server)
-                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                today = f"{dt.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
                 message += f'📅 {today}\n'
                 date_appended = True
             message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
@@ -266,10 +266,10 @@ async def taskgenshinpy(cookie):
         result.append(claim_message)
 
         log.info(f'Preparing to get traveler\'s diary for UID {accounts[0].uid}...')
-        diary = await client.get_diary()
+        diary = await client.get_genshin_diary()
         diary_data = {
             'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Traveler',
-            'month': datetime.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+            'month': dt.datetime.strptime(str(diary.month), "%m").strftime("%B"),
             'current_primogems': diary.data.current_primogems,
             'current_mora': diary.data.current_mora
         }
@@ -313,7 +313,7 @@ async def taskgenshinpyhonkai(cookie):
             message = ''
             if not date_appended or type(config.GENSHINPY_HONKAI.get('utc_offset')) != int:
                 timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_HONKAI)
-                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                today = f"{dt.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
                 message += f'📅 {today}\n'
                 date_appended = True
             message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
@@ -377,7 +377,7 @@ async def taskgenshinpystarrail(cookie):
             message = ''
             if not date_appended or type(config.GENSHINPY_STARRAIL.get('utc_offset')) != int:
                 timezone, utc_offset_str = assert_timezone(server=account.server, conf=config.GENSHINPY_STARRAIL)
-                today = f"{datetime.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
+                today = f"{dt.datetime.now(timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else 'N/A'
                 message += f'📅 {today}\n'
                 date_appended = True
             message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
@@ -512,6 +512,7 @@ async def job2genshinpy():
             if not _accounts:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
+            # TODO: Wait for genshin.py to support character names again
             #expedition_fmt = '└─ {character_name:<19} {expedition_status}'
             expedition_fmt = '└─ {expedition_status}'
             RESIN_TIMER_TEMPLATE = '''🏆 Genshin Impact
@@ -548,7 +549,7 @@ async def job2genshinpy():
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
-                    'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                    'today': f"{dt.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
                     'nickname': account.nickname,
                     'server_name': account.server_name,
                     'level': account.level,
@@ -572,13 +573,14 @@ async def job2genshinpy():
                 earliest_expedition = False
                 for expedition in notes.expeditions:
                     expedition_data = {
+                        # TODO: Wait for genshin.py to support character names again
                         #'character_name': (expedition.character.name[:18] + '…') if len(expedition.character.name) > 19 else expedition.character.name
                     }
                     if expedition.finished:
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - dt.datetime.now()).total_seconds(), 0)
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -591,9 +593,9 @@ async def job2genshinpy():
                         details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
                 is_full = notes.current_resin >= notes.max_resin
-                is_resin_recovery_time_datetime = isinstance(notes.resin_recovery_time, datetime.datetime)
+                is_resin_recovery_time_datetime = isinstance(notes.resin_recovery_time, dt.datetime)
                 if not is_full and is_resin_recovery_time_datetime:
-                    until_resin_recovery = (notes.resin_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                    until_resin_recovery = (notes.resin_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
                     data['until_resin_recovery_fmt'] = f'({display_time(seconds_to_time(until_resin_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_resin_recovery_date_fmt'] = f"Full at {notes.resin_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
@@ -606,9 +608,9 @@ async def job2genshinpy():
                 is_realm_currency_full = is_realm_currency_recovery_time_datetime = False
                 if do_realm_currency:
                     is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-                    is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, datetime.datetime)
+                    is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, dt.datetime)
                     if not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
-                        until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                        until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
                         data['until_realm_currency_recovery_fmt'] = f'({display_time(seconds_to_time(until_realm_currency_recovery), short=True, min_units=2, max_units=2)})'
                         if timezone:
                             data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
@@ -623,7 +625,7 @@ async def job2genshinpy():
                 do_transformer = notes.remaining_transformer_recovery_time != None
                 is_transformer_ready = until_transformer_recovery = False
                 if do_transformer:
-                    until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds())
+                    until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds())
                     if until_transformer_recovery > 0:
                         recovery_date_fmt = '%Y-%m-%d'
                         if notes.remaining_transformer_recovery_time.minutes or notes.remaining_transformer_recovery_time.seconds:
@@ -819,7 +821,7 @@ async def job2genshinpystarrail():
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
-                    'today': f"{datetime.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                    'today': f"{dt.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
                     'nickname': account.nickname,
                     'server_name': account.server_name,
                     'level': account.level,
@@ -840,7 +842,7 @@ async def job2genshinpystarrail():
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - datetime.datetime.now()).total_seconds(), 0)
+                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - dt.datetime.now()).total_seconds(), 0)
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -853,9 +855,9 @@ async def job2genshinpystarrail():
                         details.append(f"└─ Earliest at {earliest_expedition.strftime('%Y-%m-%d %I:%M %p')}")
 
                 is_full = notes.current_stamina >= notes.max_stamina
-                is_stamina_recovery_time_datetime = isinstance(notes.stamina_recovery_time, datetime.datetime)
+                is_stamina_recovery_time_datetime = isinstance(notes.stamina_recovery_time, dt.datetime)
                 if not is_full and is_stamina_recovery_time_datetime:
-                    until_stamina_recovery = (notes.stamina_recovery_time.replace(tzinfo=None) - datetime.datetime.now(tz=None)).total_seconds()
+                    until_stamina_recovery = (notes.stamina_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
                     data['until_stamina_recovery_fmt'] = f'({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_stamina_recovery_date_fmt'] = f"Full at {notes.stamina_recovery_time.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
