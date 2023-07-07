@@ -512,7 +512,8 @@ async def job2genshinpy():
             if not _accounts:
                 return log.info("There are no Genshin accounts associated to this HoYoverse account.")
 
-            expedition_fmt = '└─ {character_name:<19} {expedition_status}'
+            #expedition_fmt = '└─ {character_name:<19} {expedition_status}'
+            expedition_fmt = '└─ {expedition_status}'
             RESIN_TIMER_TEMPLATE = '''🏆 Genshin Impact
 ☁️ Real-Time Notes
 📅 {today}
@@ -571,7 +572,7 @@ async def job2genshinpy():
                 earliest_expedition = False
                 for expedition in notes.expeditions:
                     expedition_data = {
-                        'character_name': (expedition.character.name[:18] + '…') if len(expedition.character.name) > 19 else expedition.character.name
+                        #'character_name': (expedition.character.name[:18] + '…') if len(expedition.character.name) > 19 else expedition.character.name
                     }
                     if expedition.finished:
                         expedition_data['expedition_status'] = '✨ Completed!'
