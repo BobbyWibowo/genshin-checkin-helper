@@ -13,6 +13,7 @@ nest-asyncio = "^1.5.6"
 genshin = { git = "https://github.com/thesadru/genshin.py.git", rev = "a1ec09c4147cbb881ec1edf426515c416c1d453b" }
 aiohttp = "^3.8.1"
 pydantic = "=1.*"
+anticaptchaofficial = "^1.0.53"
 
 [tool.poetry.dev-dependencies]
 

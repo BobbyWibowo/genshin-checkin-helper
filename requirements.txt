@@ -5,3 +5,4 @@ nest_asyncio
 genshin @ git+https://github.com/thesadru/genshin.py.git@a1ec09c4147cbb881ec1edf426515c416c1d453b
 aiohttp
 pydantic==1.*
+anticaptchaofficial

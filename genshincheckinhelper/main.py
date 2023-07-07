@@ -32,6 +32,7 @@ from onepush import notify
 
 import asyncio
 import genshin # thesadru/genshin.py
+from anticaptchaofficial.geetestproxyless import *
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -200,6 +201,51 @@ def taskhoyolab(cookie):
     return task_common(r, d, MESSAGE_TEMPLATE, DAIRY_TEMPLATE)
 
 
+async def claim_genshin_daily_reward(client: genshin.Client, challenge=None):
+    data = {}
+
+    if not client:
+        return data
+
+    try:
+        log.info('Preparing to claim daily reward...')
+        reward = await client.claim_daily_reward(challenge=challenge)
+    except genshin.AlreadyClaimed:
+        log.info('Preparing to get claimed reward information...')
+        claimed = await client.claimed_rewards(limit=1)
+        data['status'] = '👀 You have already checked-in'
+        data['name'] = claimed[0].name
+        data['amount'] = claimed[0].amount
+    except genshin.errors.GeetestTriggered as e:
+        log.info('GeeTest captcha triggered...')
+        if (challenge):
+            log.info('GeeTest captcha solver stuck on a loop, skipping...')
+            data['status'] = '🙁 GeeTest solver stuck on a loop'
+        elif (config.ANTICAPTCHA_API_KEY):
+            log.info('Attempting to solve GeeTest captcha...')
+            # TODO: Mainly as a proof of concept, support for this will likely be abandoned in the future
+            solver = geetestProxyless()
+            solver.set_key(config.ANTICAPTCHA_API_KEY)
+            solver.set_website_url("https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&hyl_auth_required=true&hyl_presentation_style=fullscreen&utm_source=hoyolab&utm_medium=tools&lang=en-us&bbs_theme=dark&bbs_theme_device=1")
+            solver.set_gt_key(e.gt)
+            solver.set_challenge_key(e.challenge)
+            token = solver.solve_and_return_solution()
+            if token != 0:
+                log.info('GeeTest captcha solved, preparing to re-claim daily reward...')
+                data = await claim_genshin_daily_reward(client=client, challenge=token)
+            else:
+                log.info('GeeTest captcha solver failed ({solver.error_code}), skipping...')
+                data['status'] = '🙁 GeeTest solver failed'
+        else:
+            data['status'] = '🙁 GeeTest captcha triggered'
+    else:
+        data['status'] = 'OK\n    Olah! Odomu'
+        data['name'] = reward.name
+        data['amount'] = reward.amount
+
+    return data
+
+
 async def taskgenshinpy(cookie):
     try:
         result = []
@@ -244,20 +290,12 @@ async def taskgenshinpy(cookie):
             message += f'🔅 {account.nickname} {account.server_name} Lv. {account.level}\n'
             result.append(message)
 
-        data = {}
-        try:
-            log.info('Preparing to claim daily reward...')
-            reward = await client.claim_daily_reward()
-        except genshin.AlreadyClaimed:
-            log.info('Preparing to get claimed reward information...')
-            claimed = await client.claimed_rewards(limit=1)
-            data['status'] = '👀 You have already checked-in'
-            data['name'] = claimed[0].name
-            data['amount'] = claimed[0].amount
+        data = await claim_genshin_daily_reward(client=client, challenge=None)
+
+        if data['name'] and data['amount']:
+            data['today_reward'] = '{name} x {amount}'.format(**data)
         else:
-            data['status'] = 'OK\n    Olah! Odomu'
-            data['name'] = reward.name
-            data['amount'] = reward.amount
+            data['today_reward'] = 'N/A'
 
         log.info('Preparing to get monthly rewards information...')
         reward_info = await client.get_reward_info()

@@ -5,6 +5,7 @@
   "CHECK_NOTES_SECS": 900,
   "CHECK_NOTES_SECS_RANGE": "480-960",
   "NOTES_TIMER_DO_NOT_DISTURB": "23:00-07:00",
+  "ANTICAPTCHA_API_KEY": "",
   "GENSHINPY": {
     "cookies": "",
     "uids": "",
