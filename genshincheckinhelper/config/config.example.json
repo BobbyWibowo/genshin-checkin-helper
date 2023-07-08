@@ -12,7 +12,8 @@
     "utc_offset": false,
     "resin_threshold": 140,
     "realm_currency_threshold": -80,
-    "suspend_check_notes_during_dnd": false
+    "suspend_check_notes_during_dnd": false,
+    "skip_diary": false
   },
   "GENSHINPY_HONKAI": {
     "cookies": "",
@@ -24,14 +25,15 @@
     "uids": "",
     "utc_offset": false,
     "power_threshold": 150,
-    "suspend_check_notes_during_dnd": false
+    "suspend_check_notes_during_dnd": false,
+    "skip_diary": false
   },
   "COOKIE_HOYOLAB": "",
-  "SHOPTOKEN": "",
   "ONEPUSH": {
     "notifier": "",
     "params": {
-      "markdown": false
+      "markdown": true,
+      "webhook": null
     }
   }
 }

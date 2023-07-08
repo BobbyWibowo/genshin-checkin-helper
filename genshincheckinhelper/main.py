@@ -231,7 +231,7 @@ async def claim_genshin_daily_reward(client: genshin.Client, challenge=None):
             solver.set_challenge_key(e.challenge)
             token = solver.solve_and_return_solution()
             if token != 0:
-                log.info('GeeTest captcha solved, preparing to re-claim daily reward...')
+                log.info('GeeTest captcha solved, continuing...')
                 data = await claim_genshin_daily_reward(client=client, challenge=token)
             else:
                 log.info(f'GeeTest captcha solver failed ({solver.error_code}), skipping...')
@@ -292,7 +292,7 @@ async def taskgenshinpy(cookie):
 
         data = await claim_genshin_daily_reward(client=client, challenge=None)
 
-        if data['name'] and data['amount']:
+        if 'name' in data and 'amount' in data:
             data['today_reward'] = '{name} x {amount}'.format(**data)
         else:
             data['today_reward'] = 'N/A'
@@ -303,16 +303,20 @@ async def taskgenshinpy(cookie):
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
 
-        log.info(f'Preparing to get traveler\'s diary for UID {accounts[0].uid}...')
-        diary = await client.get_genshin_diary()
-        diary_data = {
-            'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Traveler',
-            'month': dt.datetime.strptime(str(diary.month), "%m").strftime("%B"),
-            'current_primogems': diary.data.current_primogems,
-            'current_mora': diary.data.current_mora
-        }
-        daily_addons = DIARY_TEMPLATE.format(**diary_data)
-        result.append(daily_addons)
+        if not config.GENSHINPY.get('skip_diary'):
+            try:
+                log.info(f'Preparing to get traveler\'s diary for UID {accounts[0].uid}...')
+                diary = await client.get_genshin_diary()
+                diary_data = {
+                    'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Traveler',
+                    'month': dt.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+                    'current_primogems': diary.data.current_primogems,
+                    'current_mora': diary.data.current_mora
+                }
+                daily_addons = DIARY_TEMPLATE.format(**diary_data)
+                result.append(daily_addons)
+            except Exception:
+                result.append('    Unable to get traveler\'s diary.')
     finally:
         log.info('Task finished.')
     return result
@@ -394,9 +398,14 @@ async def taskgenshinpystarrail(cookie):
         if not _accounts:
             return log.info("There are no Star Rail accounts associated to this HoYoverse account.")
 
+        DIARY_TEMPLATE = '''    {display_name}'s Monthly Calendar: {month}
+    💎 Stellar Jade: {current_hcoin}
+    🎫 Pass & Special Pass: {current_rails_pass}'''
+
         CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}'''
+    Status: {status}
+'''
 
         accounts = None
         if config.GENSHINPY_STARRAIL.get('uids'):
@@ -441,6 +450,21 @@ async def taskgenshinpystarrail(cookie):
         data['claimed_rewards'] = reward_info.claimed_rewards
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
+
+        if not config.GENSHINPY_STARRAIL.get('skip_diary'):
+            try:
+                log.info(f'Preparing to get trailblazer\'s monthly calendar for UID {accounts[0].uid}...')
+                diary = await client.get_starrail_diary()
+                diary_data = {
+                    'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Trailblazer',
+                    'month': dt.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+                    'current_hcoin': diary.data.current_hcoin,
+                    'current_rails_pass': diary.data.current_rails_pass
+                }
+                daily_addons = DIARY_TEMPLATE.format(**diary_data)
+                result.append(daily_addons)
+            except Exception:
+                result.append('    Unable to get trailblazer\'s monthly calendar.')
     finally:
         log.info('Task finished.')
     return result
