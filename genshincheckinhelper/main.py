@@ -315,7 +315,8 @@ async def taskgenshinpy(cookie):
                 }
                 daily_addons = DIARY_TEMPLATE.format(**diary_data)
                 result.append(daily_addons)
-            except Exception:
+            except Exception as e:
+                log.warning(str(e))
                 result.append('    Unable to get traveler\'s diary.')
     finally:
         log.info('Task finished.')
@@ -457,13 +458,14 @@ async def taskgenshinpystarrail(cookie):
                 diary = await client.get_starrail_diary()
                 diary_data = {
                     'display_name': f'{accounts[0].nickname}' if len(accounts) > 1 else 'Trailblazer',
-                    'month': dt.datetime.strptime(str(diary.month), "%m").strftime("%B"),
+                    'month': f'{dt.datetime.strptime(str(diary.month)[4:], "%m").strftime("%B")} {str(diary.month)[:4]}',
                     'current_hcoin': diary.data.current_hcoin,
                     'current_rails_pass': diary.data.current_rails_pass
                 }
                 daily_addons = DIARY_TEMPLATE.format(**diary_data)
                 result.append(daily_addons)
-            except Exception:
+            except Exception as e:
+                log.warning(str(e))
                 result.append('    Unable to get trailblazer\'s monthly calendar.')
     finally:
         log.info('Task finished.')
