@@ -763,7 +763,8 @@ async def job2genshinpy():
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_NOTIFY_CNT_STR) else '0'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR) else '0'
                     try:
-                        realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold') or -80)
+                        # default fallback: ~3 hours before capping (30 currency per hour if maxed level, so 90 currency for ~3 hours)
+                        realm_currency_threshold = int(config.GENSHINPY.get('realm_currency_threshold') or -90)
                         if realm_currency_threshold < 0:
                             is_realm_currency_threshold = notes.current_realm_currency >= (notes.max_realm_currency + realm_currency_threshold)
                         else:
