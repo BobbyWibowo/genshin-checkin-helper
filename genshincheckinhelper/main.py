@@ -739,8 +739,17 @@ async def job2genshinpy():
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(RESIN_THRESHOLD_NOTIFY_CNT_STR) else '0'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
 
-                resin_threshold = int(config.GENSHINPY.get('resin_threshold') or 140)
-                is_threshold = notes.current_resin >= resin_threshold
+                is_threshold = False
+                try:
+                    # default fallback: ~3 hours before capping (8 minutes per resin, so 23 resins for ~3 hours)
+                    resin_threshold = int(config.GENSHINPY.get('resin_threshold') or -23)
+                    if resin_threshold < 0:
+                        is_threshold = notes.current_resin >= (notes.max_resin + resin_threshold)
+                    else:
+                        is_threshold = notes.current_resin >= resin_threshold
+                except:
+                    pass
+
                 is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
                 is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_resin_recovery_time_changed = False
@@ -955,8 +964,17 @@ async def job2genshinpystarrail():
                 os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(STAMINA_THRESHOLD_NOTIFY_CNT_STR) else '0'
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if os.environ.get(EXPEDITION_NOTIFY_CNT_STR) else '0'
 
-                stamina_threshold = int(config.GENSHINPY_STARRAIL.get('stamina_threshold') or 150)
-                is_threshold = notes.current_stamina >= stamina_threshold
+                is_threshold = False
+                try:
+                    # default fallback: ~3 hours before capping (6 minutes per power, so 30 power for ~3 hours)
+                    stamina_threshold = int(config.GENSHINPY_STARRAIL.get('stamina_threshold') or -30)
+                    if stamina_threshold < 0:
+                        is_threshold = notes.current_stamina >= (notes.max_stamina + stamina_threshold)
+                    else:
+                        is_threshold = notes.current_stamina >= stamina_threshold
+                except:
+                    pass
+
                 is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) < count
                 is_stamina_threshold_notify = int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_stamina_recovery_time_changed = False
