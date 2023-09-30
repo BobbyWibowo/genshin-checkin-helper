@@ -2,7 +2,7 @@ genshinhelper==2.1.3
 onepush==1.1.1
 schedule
 nest_asyncio
-genshin @ git+https://github.com/thesadru/genshin.py.git@a1ec09c4147cbb881ec1edf426515c416c1d453b
+genshin @ git+https://github.com/thesadru/genshin.py.git@de07439215f9390a3c1a5bdbe5ff5902e6608dd7
 aiohttp
 pydantic==1.*
 anticaptchaofficial

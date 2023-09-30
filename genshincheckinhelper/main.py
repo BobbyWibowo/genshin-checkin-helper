@@ -587,6 +587,7 @@ async def job2genshinpy():
      └─ {until_resin_recovery_date_fmt}
     Realm Currency: {realm_currency}
     Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
+    Encounter Points: {completed_tasks} / {max_tasks} {tasks_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Parametric Transformer: {transformer}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
@@ -625,13 +626,19 @@ async def job2genshinpy():
                     'until_realm_currency_recovery_fmt': '',
                     'completed_commissions': notes.completed_commissions,
                     'max_commissions': notes.max_commissions,
-                    'commissions_status': '⚠️' if notes.completed_commissions < notes.max_commissions else '',
+                    'commissions_status': '',
+                    'completed_tasks': notes.daily_task.completed_tasks,
+                    'max_tasks': notes.daily_task.max_tasks,
+                    'tasks_status': '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
                     'resin_discounts_status': '⚠️' if notes.remaining_resin_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'max_expeditions': notes.max_expeditions
                 }
+
+                if (notes.completed_commissions + notes.daily_task.completed_tasks) < (notes.daily_task.max_tasks):
+                    data['commissions_status'] = data['tasks_status'] = '⚠️'
 
                 details = []
                 earliest_expedition = False
