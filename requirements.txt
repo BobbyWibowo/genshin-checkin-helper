@@ -1,8 +1,9 @@
-genshinhelper==2.1.3
-onepush==1.1.1
+genshinhelper @ git+https://github.com/y1ndan/genshinhelper2.git@1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd
+onepush
 schedule
 nest_asyncio
-genshin @ git+https://github.com/thesadru/genshin.py.git@f0dbef5e66e9885f7fcdae5a3e75cd97e1f64235
+genshin
 aiohttp
-pydantic==1.*
+pydantic
 anticaptchaofficial
+qrcode[pil]
