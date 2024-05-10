@@ -27,20 +27,23 @@ CONFIG_DICT = {
 class Config(object):
     """
     Get all configuration from the config.json file.
-    If config.json dose not exist, use config.example.json file.
 
         Note:   Environment variables have a higher priority,
                 if you set a environment variable in your system,
                 that variable in the config.json file will be invalid.
     """
 
+    config_exists: bool
+
     def __init__(self):
         # Open and read the config file
         # project_path = os.path.dirname(os.path.dirname(__file__))
         project_path = os.path.dirname(__file__)
         config_file = os.path.join(project_path, 'config', 'config.json')
-        if not os.path.exists(config_file):
-            config_file = os.path.join(project_path, 'config', 'config.example.json')
+
+        self.config_exists = os.path.exists(config_file)
+        if not self.config_exists:
+            return
 
         with open(config_file, 'r', encoding='utf-8') as f:
             self.config_json = json.load(f)

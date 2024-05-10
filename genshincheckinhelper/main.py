@@ -37,6 +37,10 @@ from anticaptchaofficial.geetestproxyless import *
 import nest_asyncio
 nest_asyncio.apply()
 
+if not config.config_exists:
+    log.error('./config/config.json does not exist. Create one based on ./config/config.example.json.')
+    exit(1)
+
 version = '1.2.0'
 banner = f'''
 +----------------------------------------------------------------+
