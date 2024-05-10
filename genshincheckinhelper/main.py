@@ -888,6 +888,10 @@ async def job2genshinpystarrail():
 🔅 {nickname} {server_name} Lv. {level}
     Trailblaze Power: {current_stamina} / {max_stamina} {until_stamina_recovery_fmt}
      └─ {until_stamina_recovery_date_fmt}
+    Reserved Power: {current_reserve_stamina} / 2400
+    Daily Training: {current_train_score} / {max_train_score} {train_status}
+    Simulated Universe: {current_rogue_score} / {max_rogue_score} {rogue_score_status}
+    Echo of War: {remaining_weekly_discounts} / {max_weekly_discounts} {weekly_discounts_status}
     Assignment Execution: {completed_expeditions} / {total_expeditions_num}'''
 
             accounts = None
@@ -913,6 +917,16 @@ async def job2genshinpystarrail():
                     'current_stamina': notes.current_stamina,
                     'max_stamina': notes.max_stamina,
                     'until_stamina_recovery_fmt': '',
+                    'current_reserve_stamina': notes.current_reserve_stamina,
+                    'current_train_score': notes.current_train_score,
+                    'max_train_score': notes.max_train_score,
+                    'train_status': '⚠️' if notes.current_train_score < notes.max_train_score else '',
+                    'current_rogue_score': notes.current_rogue_score,
+                    'max_rogue_score': notes.max_rogue_score,
+                    'rogue_score_status': '⚠️' if notes.current_rogue_score < notes.max_rogue_score else '',
+                    'remaining_weekly_discounts': notes.remaining_weekly_discounts,
+                    'max_weekly_discounts': notes.max_weekly_discounts,
+                    'weekly_discounts_status': '⚠️' if notes.remaining_weekly_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'total_expeditions_num': notes.total_expedition_num
                 }
