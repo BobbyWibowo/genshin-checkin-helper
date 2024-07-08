@@ -220,14 +220,13 @@ async def claim_genshin_daily_reward(client: genshin.Client, challenge=None):
         data['status'] = '👀 You have already checked-in'
         data['name'] = claimed[0].name
         data['amount'] = claimed[0].amount
-    except genshin.errors.GeetestTriggered as e:
+    except genshin.DailyGeetestTriggered as e:
         log.info('GeeTest captcha triggered...')
         if (challenge):
             log.info('GeeTest captcha solver stuck on a loop, skipping...')
             data['status'] = '🙁 GeeTest solver stuck on a loop'
         elif (config.ANTICAPTCHA_API_KEY):
             log.info('Attempting to solve GeeTest captcha...')
-            # TODO: Mainly as a proof of concept, support for this will likely be abandoned in the future
             solver = geetestProxyless()
             solver.set_key(config.ANTICAPTCHA_API_KEY)
             solver.set_website_url("https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&hyl_auth_required=true&hyl_presentation_style=fullscreen&utm_source=hoyolab&utm_medium=tools&lang=en-us&bbs_theme=dark&bbs_theme_device=1")
