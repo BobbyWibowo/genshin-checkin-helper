@@ -19,6 +19,7 @@ CONFIG_DICT = {
     'GENSHINPY': 'GENSHINPY',
     'GENSHINPY_HONKAI': 'GENSHINPY_HONKAI',
     'GENSHINPY_STARRAIL': 'GENSHINPY_STARRAIL',
+    'GENSHINPY_ZZZ': 'GENSHINPY_ZZZ',
     'COOKIE_HOYOLAB': 'COOKIE_HOYOLAB',
     'ONEPUSH': 'ONEPUSH'
 }
@@ -69,7 +70,8 @@ class Config(object):
         if (key == 'ONEPUSH' or
             key == 'GENSHINPY' or
             key == 'GENSHINPY_HONKAI' or
-            key == 'GENSHINPY_STARRAIL') and '{' in value:
+            key == 'GENSHINPY_STARRAIL' or
+            key == 'GENSHINPY_ZZZ') and '{' in value:
             value = json.loads(value)
         return value
 

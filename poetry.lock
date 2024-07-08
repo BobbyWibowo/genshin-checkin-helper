@@ -313,24 +313,29 @@ files = [
 
 [[package]]
 name = "genshin"
-version = "1.6.3"
+version = "1.7.1"
 description = "An API wrapper for Genshin Impact."
 optional = false
 python-versions = ">=3.8"
-files = [
-    {file = "genshin-1.6.3-py3-none-any.whl", hash = "sha256:de5f87dbac46abbbed8ccc6cf48be345044a927cbce28fe0830639484d53b1e0"},
-    {file = "genshin-1.6.3.tar.gz", hash = "sha256:5a9dc17fcaf1627f1b4077e77d6e000c1121b8d8797e34809bc8dce6678606cc"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 aiohttp = "*"
 pydantic = "*"
 
 [package.extras]
-all = ["browser-cookie3", "click", "qrcode[pil]", "rsa"]
+all = ["aiohttp-socks", "browser-cookie3", "click", "qrcode[pil]", "rsa"]
+auth = ["qrcode[pil]", "rsa"]
 cli = ["click"]
 cookies = ["browser-cookie3"]
-geetest = ["qrcode[pil]", "rsa"]
+socks-proxy = ["aiohttp-socks"]
+
+[package.source]
+type = "git"
+url = "https://github.com/thesadru/genshin.py"
+reference = "dev"
+resolved_reference = "c249d3db07e30066f1a08139ed77ffdc62737850"
 
 [[package]]
 name = "genshinhelper"
@@ -945,4 +950,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8, <3.12"
-content-hash = "330d94bf6d1808ea7655c84d9a8bda33b37187e998cb53a322825708fa92ab0b"
+content-hash = "1f4de86501e23381a0163b0ebdab60a4dc04edf586c7d7d73652c5e308ba3117"

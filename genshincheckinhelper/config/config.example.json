@@ -28,6 +28,13 @@
     "suspend_check_notes_during_dnd": false,
     "skip_diary": false
   },
+  "GENSHINPY_ZZZ": {
+    "cookies": "",
+    "uids": "",
+    "utc_offset": false,
+    "battery_threshold": -30,
+    "suspend_check_notes_during_dnd": false
+  },
   "COOKIE_HOYOLAB": "",
   "ONEPUSH": {
     "notifier": "",
