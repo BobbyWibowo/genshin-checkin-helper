@@ -713,6 +713,7 @@ async def job2genshinpy():
                     data['commissions_status'] = data['tasks_status'] = '⚠️'
 
                 details = []
+
                 earliest_expedition = False
                 for expedition in notes.expeditions:
                     expedition_data = {
@@ -1000,6 +1001,7 @@ async def job2genshinpystarrail():
                 }
 
                 details = []
+
                 earliest_expedition = False
                 for expedition in notes.expeditions:
                     expedition_data = {
@@ -1115,6 +1117,156 @@ async def job2genshinpystarrail():
     return result
 
 
+async def job2genshinpyzzz():
+    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
+    if (config.GENSHINPY_ZZZ.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
+        return
+
+    log.info('Starting real-time notes tasks for Zenless Zone Zero...')
+    result = []
+    for i in get_cookies(config.GENSHINPY_ZZZ.get('cookies')):
+        try:
+            client = genshin.Client(game=genshin.Game.ZZZ)
+            client.set_cookies(i)
+
+            log.info('Preparing to get user game roles information...')
+            _accounts = list(filter(lambda account: 'nap' in account.game_biz, await client.get_game_accounts()))
+            if not _accounts:
+                return log.info("There are no Zenless Zone Zero accounts associated to this HoYoverse account.")
+
+            VIDEO_STORE_STATUS = {
+                'REVENUE_AVAILABLE': '⚠️ Revenue available.',
+                'WAITING_TO_OPEN': '⚠️ Waiting to open\u2026',
+                'CURRENTLY_OPEN': 'Currently open.'
+            }
+
+            BATTERY_TIMER_TEMPLATE = '''🏆 Zenless Zone Zero
+☁️ Real-Time Notes
+📅 {today}
+🔅 {nickname} {server_name} Lv. {level}
+    Battery: {current_battery} / {max_battery} {until_battery_recovery_fmt}
+     └─ {until_battery_recovery_date_fmt}
+    Engagement: {current_engagement} / {max_engagement} {engagement_status}
+    Scratch Card: {scratch_card_status}
+    Video Store: {video_store_status}'''
+
+            accounts = None
+            if config.GENSHINPY_ZZZ.get('uids'):
+                uids = config.GENSHINPY_ZZZ.get('uids').split('#')
+                accounts = get_genshinpy_accounts(_accounts, uids)
+                if not accounts:
+                    return
+            else:
+                accounts = _accounts
+
+            for account in accounts:
+                log.info(f"Preparing to get notes information for UID {account.uid}...")
+                client.uid = account.uid
+                notes = await client.get_zzz_notes()
+
+                timezone, utc_offset_str = assert_timezone(server=account.server)
+                data = {
+                    'today': f"{dt.datetime.now(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}" if timezone else '',
+                    'nickname': account.nickname,
+                    'server_name': account.server_name,
+                    'level': account.level,
+                    'current_battery': notes.battery_charge.current,
+                    'max_battery': notes.battery_charge.max,
+                    'until_battery_recovery_fmt': '',
+                    'current_engagement': notes.engagement.current,
+                    'max_engagement': notes.engagement.max,
+                    'engagement_status': '⚠️' if notes.engagement.current < notes.engagement.max else '',
+                    'scratch_card_status': '⚠️ Not done!' if notes.scratch_card_completed else 'Done.',
+                    'video_store_status': VIDEO_STORE_STATUS[notes.video_store_state.name]
+                }
+
+                details = []
+
+                is_full = notes.battery_charge.current >= notes.battery_charge.max
+                is_battery_recovery_time_datetime = isinstance(notes.battery_charge.full_datetime, dt.datetime)
+                if not is_full and is_battery_recovery_time_datetime:
+                    until_battery_recovery = (notes.battery_charge.full_datetime.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
+                    data['until_battery_recovery_fmt'] = f'({display_time(seconds_to_time(until_battery_recovery), short=True, min_units=2, max_units=2)})'
+                    if timezone:
+                        data['until_battery_recovery_date_fmt'] = f"Full at {notes.battery_charge.full_datetime.astimezone(tz=timezone).strftime('%Y-%m-%d %I:%M %p')} {utc_offset_str}"
+                    else:
+                        data['until_battery_recovery_date_fmt'] = f"Full at {notes.battery_charge.full_datetime.strftime('%Y-%m-%d %I:%M %p')}"
+                else:
+                    data['until_battery_recovery_date_fmt'] = '✨ Full!'
+
+                message = BATTERY_TIMER_TEMPLATE.format(**data)
+                if details:
+                    message += '\n     '.join([''] + details)
+                result.append(message)
+                log.info(message)
+
+                is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
+                content = f'```\n{message}```' if is_markdown else message
+                status = 'Push conditions have not been met yet, will re-check later as scheduled.'
+
+                count = 3
+                IS_NOTIFY_STR = f"UID_ZZZ_{account.uid}_IS_NOTIFY_STR"
+                BATTERY_NOTIFY_CNT_STR = f"UID_ZZZ_{account.uid}_BATTERY_NOTIFY_CNT"
+                BATTERY_THRESHOLD_NOTIFY_CNT_STR = f"UID_ZZZ_{account.uid}_BATTERY_THRESHOLD_NOTIFY_CNT"
+                BATTERY_LAST_RECOVERY_TIME = f"UID_SR_{account.uid}_BATTERY_LAST_RECOVERY_TIME"
+
+                is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
+                os.environ[IS_NOTIFY_STR] = 'False'
+                os.environ[BATTERY_NOTIFY_CNT_STR] = os.environ[BATTERY_NOTIFY_CNT_STR] if os.environ.get(BATTERY_NOTIFY_CNT_STR) else '0'
+                os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] if os.environ.get(BATTERY_THRESHOLD_NOTIFY_CNT_STR) else '0'
+
+                is_threshold = False
+                try:
+                    # default fallback: ~3 hours before capping (6 minutes per battery, so 30 battery for ~3 hours)
+                    battery_threshold = int(config.GENSHINPY_ZZZ.get('battery_threshold') or -30)
+                    if battery_threshold < 0:
+                        is_threshold = notes.battery_charge.current >= (notes.battery_charge.max + battery_threshold)
+                    else:
+                        is_threshold = notes.battery_charge.current >= battery_threshold
+                except:
+                    pass
+
+                is_battery_notify = int(os.environ[BATTERY_NOTIFY_CNT_STR]) < count
+                is_battery_threshold_notify = int(os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR]) < 1
+                is_battery_recovery_time_changed = False
+                if is_battery_recovery_time_datetime:
+                    os.environ[BATTERY_LAST_RECOVERY_TIME] = os.environ[BATTERY_LAST_RECOVERY_TIME] if os.environ.get(BATTERY_LAST_RECOVERY_TIME) else str(notes.battery_charge.full_datetime.timestamp())
+                    is_battery_recovery_time_changed = abs(float(os.environ[BATTERY_LAST_RECOVERY_TIME]) - notes.battery_charge.full_datetime.timestamp()) > 400
+
+                if is_full and is_battery_notify and not is_do_not_disturb:
+                    os.environ[BATTERY_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_NOTIFY_CNT_STR]) + 1)
+                    status = f'Battery Charge is full! ({os.environ[BATTERY_NOTIFY_CNT_STR]}/{count})'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_threshold and is_battery_threshold_notify and not is_do_not_disturb:
+                    status = 'Battery Charge is almost full!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                    os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
+                elif is_battery_recovery_time_changed and not is_full:
+                    status = 'Battery Charge\'s recovery time has changed!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+                elif is_first_run:
+                    status = 'Real-Time Notes is being monitored!'
+                    os.environ[IS_NOTIFY_STR] = 'True'
+
+                os.environ[BATTERY_NOTIFY_CNT_STR] = os.environ[BATTERY_NOTIFY_CNT_STR] if is_full else '0'
+                os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
+                if is_battery_recovery_time_datetime:
+                    os.environ[BATTERY_LAST_RECOVERY_TIME] = str(notes.battery_charge.full_datetime.timestamp())
+
+                title = status
+                log.info(title)
+                if os.environ[IS_NOTIFY_STR] == 'True':
+                    notify_me(title, content)
+        except genshin.GenshinException as e:
+            log.info(e)
+        except Exception as e:
+            log.exception('EXCEPTION')
+        finally:
+            log.info('Task finished.')
+    return result
+
+
 def schedulecatch(func):
     try:
         asyncio.get_event_loop().run_until_complete(func())
@@ -1129,10 +1281,12 @@ async def run_once():
                 del os.environ[i]
 
         gh.set_lang(config.LANGUAGE)
-        if config.GENSHINPY.get('cookies'):
+        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
             await job2genshinpy()
-        if config.GENSHINPY_STARRAIL.get('cookies'):
+        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
             await job2genshinpystarrail()
+        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
+            await job2genshinpyzzz()
         await job1()
     except Exception as e:
         print(e)
@@ -1146,15 +1300,19 @@ async def main():
 
     if config.CHECK_NOTES_SECS_RANGE:
         t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
-        if config.GENSHINPY.get('cookies'):
+        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
             schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpy))
-        if config.GENSHINPY_STARRAIL.get('cookies'):
+        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
             schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
+        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
+            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpyzzz))
     else:
-        if config.GENSHINPY.get('cookies'):
+        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
             schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
-        if config.GENSHINPY_STARRAIL.get('cookies'):
+        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
             schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
+        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
+            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpyzzz))
 
     while True:
         await asyncio.sleep(1)

@@ -10,6 +10,7 @@
     "cookies": "",
     "uids": "",
     "utc_offset": false,
+    "skip_notes": false,
     "resin_threshold": -23,
     "realm_currency_threshold": -90,
     "suspend_check_notes_during_dnd": false,
@@ -24,6 +25,7 @@
     "cookies": "",
     "uids": "",
     "utc_offset": false,
+    "skip_notes": false,
     "power_threshold": -30,
     "suspend_check_notes_during_dnd": false,
     "skip_diary": false
@@ -32,6 +34,7 @@
     "cookies": "",
     "uids": "",
     "utc_offset": false,
+    "skip_notes": false,
     "battery_threshold": -30,
     "suspend_check_notes_during_dnd": false
   },
