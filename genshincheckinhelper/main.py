@@ -1136,20 +1136,20 @@ async def job2genshinpyzzz():
                 return log.info("There are no Zenless Zone Zero accounts associated to this HoYoverse account.")
 
             VIDEO_STORE_STATUS = {
-                'REVENUE_AVAILABLE': '⚠️ Revenue available.',
-                'WAITING_TO_OPEN': '⚠️ Waiting to open\u2026',
-                'CURRENTLY_OPEN': 'Currently open.'
+                'REVENUE_AVAILABLE': 'Revenue Available ⚠️',
+                'WAITING_TO_OPEN': 'Waiting To Open ⚠️',
+                'CURRENTLY_OPEN': 'Currently Open'
             }
 
             BATTERY_TIMER_TEMPLATE = '''🏆 Zenless Zone Zero
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
-    Battery: {current_battery} / {max_battery} {until_battery_recovery_fmt}
+    Battery Charge: {current_battery} / {max_battery} {until_battery_recovery_fmt}
      └─ {until_battery_recovery_date_fmt}
-    Engagement: {current_engagement} / {max_engagement} {engagement_status}
-    Scratch Card: {scratch_card_status}
-    Video Store: {video_store_status}'''
+    Engagement Today: {current_engagement} / {max_engagement} {engagement_status}
+    Scratch Card Mania: {scratch_card_status}
+    Video Store Management: {video_store_status}'''
 
             accounts = None
             if config.GENSHINPY_ZZZ.get('uids'):
@@ -1177,7 +1177,7 @@ async def job2genshinpyzzz():
                     'current_engagement': notes.engagement.current,
                     'max_engagement': notes.engagement.max,
                     'engagement_status': '⚠️' if notes.engagement.current < notes.engagement.max else '',
-                    'scratch_card_status': '⚠️ Not done!' if notes.scratch_card_completed else 'Done.',
+                    'scratch_card_status': 'Complete' if notes.scratch_card_completed else 'Available ⚠️',
                     'video_store_status': VIDEO_STORE_STATUS[notes.video_store_state.name]
                 }
 
