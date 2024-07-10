@@ -44,10 +44,10 @@ if not config.config_exists:
 version = '1.2.0'
 banner = f'''
 +----------------------------------------------------------------+
-|         𒆙  Genshin Check-In Helper v{version}           |
+|        𒆙  HoYoverse Check-In Helper v{version}          |
 +----------------------------------------------------------------+
 Project      : genshin-checkin-helper
-Description  : More than check-in for Genshin Impact.
+Description  : More than check-in for HoYoverse games.
 Authors      : 银弹GCell(y1ndan), Bobby
 Library      : thesadru/genshin.py
 ------------------------------------------------------------------'''
@@ -622,7 +622,7 @@ async def job1():
 
     log.info('RESULT:\n' + message_box)
     if message_box != tip:
-        title = f'Genshin Impact Helper ✅ {total_success_cnt} · ❎ {total_failure_cnt}'
+        title = f'HoYoverse Check-In Helper ✅ {total_success_cnt} · ❎ {total_failure_cnt}'
         is_markdown = config.ONEPUSH.get('params', {}).get('markdown')
         content = f'```\n{message_box}```' if is_markdown else message_box
         notify_me(title, content)

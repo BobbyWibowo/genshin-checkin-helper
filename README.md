@@ -3,7 +3,7 @@
 > Requires Python **3.8.x** ~ **3.11.x**.  
 > Not yet ready for Python 3.12.x.
 
-More than check-in for Genshin Impact.
+More than check-in for ~~Genshin Impact~~ HoYoverse games.
 
 This fork is a **lazy attempt** at using [thesadru/genshin.py](https://github.com/thesadru/genshin.py) library on re-used codes from [y1ndan/genshin-checkin-helper](https://gitlab.com/y1ndan/genshin-checkin-helper).
 
