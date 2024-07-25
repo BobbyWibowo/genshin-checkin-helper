@@ -2,7 +2,7 @@ genshinhelper @ git+https://github.com/y1ndan/genshinhelper2.git@1382b89d0ee1f5d
 onepush
 schedule
 nest_asyncio
-genshin @ git+https://github.com/thesadru/genshin.py@dev
+genshin @ git+https://github.com/thesadru/genshin.py@348a3c7b30ee2185c80390f33da6daa260980721
 aiohttp
 pydantic
 anticaptchaofficial
