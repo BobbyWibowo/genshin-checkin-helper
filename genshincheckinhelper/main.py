@@ -710,24 +710,22 @@ async def job2genshinpy():
 
                 for task_reward in notes.daily_task.task_rewards:
                     if task_reward.status == 'TaskRewardStatusTakenAward':
-                        data['tasks_fmt'] += '✅ '
+                        data['tasks_fmt'] += '✅'
                     elif task_reward.status == 'TaskRewardStatusFinished':
-                        data['tasks_fmt'] += '☑️ '
+                        data['tasks_fmt'] += '☑️'
                     elif task_reward.status == 'TaskRewardStatusUnfinished':
-                        data['tasks_fmt'] += '🔲 '
-                data['tasks_fmt'].strip()
+                        data['tasks_fmt'] += '🔲'
 
                 if notes.daily_task.attendance_visible:
                     data['attendances_fmt'] = ''
                     for attendance_reward in notes.daily_task.attendance_rewards:
                         if attendance_reward.status == 'AttendanceRewardStatusTakenAward':
-                            data['attendances_fmt'] += '✅ '
+                            data['attendances_fmt'] += '✅'
                         elif attendance_reward.status == 'AttendanceRewardStatusWaitTaken':
-                            data['attendances_fmt'] += '☑️ '
+                            data['attendances_fmt'] += '☑️'
                         elif (attendance_reward.status == 'AttendanceRewardStatusForbid'
                                 or attendance_reward.status == 'AttendanceRewardStatusUnfinished'):
-                            data['attendances_fmt'] += '🔲 '
-                    data['attendances_fmt'].strip()
+                            data['attendances_fmt'] += '🔲'
 
                     data['stored_attendance'] = f'x{notes.daily_task.stored_attendance}'
 
