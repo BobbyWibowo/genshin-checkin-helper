@@ -717,7 +717,7 @@ async def job2genshinpy():
                         data['tasks_fmt'] += '🔲'
 
                 if notes.daily_task.attendance_visible:
-                    data['attendances_fmt'] = ''
+                    data['attendances_fmt'] = ' ' # initial extra space to align with daily commissions
                     for attendance_reward in notes.daily_task.attendance_rewards:
                         if attendance_reward.status == 'AttendanceRewardStatusTakenAward':
                             data['attendances_fmt'] += '✅'
