@@ -704,13 +704,13 @@ async def job2genshinpy():
                     'tasks_status': '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
-                    'resin_discounts_status': '⚠️' if notes.remaining_resin_discounts > 0 else '',
+                    'resin_discounts_status': '⏳' if notes.remaining_resin_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'max_expeditions': notes.max_expeditions
                 }
 
-                if (notes.completed_commissions + notes.daily_task.completed_tasks) < (notes.daily_task.max_tasks):
-                    data['commissions_status'] = data['tasks_status'] = '⚠️'
+                if not notes.daily_task.claimed_commission_reward:
+                    data['daily_task_status'] = '⏳'
 
                 details = []
 
@@ -989,13 +989,13 @@ async def job2genshinpystarrail():
                     'current_reserve_stamina': notes.current_reserve_stamina,
                     'current_train_score': notes.current_train_score,
                     'max_train_score': notes.max_train_score,
-                    'train_status': '⚠️' if notes.current_train_score < notes.max_train_score else '',
+                    'train_status': '⏳' if notes.current_train_score < notes.max_train_score else '',
                     'current_rogue_score': notes.current_rogue_score,
                     'max_rogue_score': notes.max_rogue_score,
-                    'rogue_score_status': '⚠️' if notes.current_rogue_score < notes.max_rogue_score else '',
+                    'rogue_score_status': '⏳' if notes.current_rogue_score < notes.max_rogue_score else '',
                     'remaining_weekly_discounts': notes.remaining_weekly_discounts,
                     'max_weekly_discounts': notes.max_weekly_discounts,
-                    'weekly_discounts_status': '⚠️' if notes.remaining_weekly_discounts > 0 else '',
+                    'weekly_discounts_status': '⏳' if notes.remaining_weekly_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'total_expeditions_num': notes.total_expedition_num
                 }
@@ -1136,8 +1136,8 @@ async def job2genshinpyzzz():
                 return log.info("There are no Zenless Zone Zero accounts associated to this HoYoverse account.")
 
             VIDEO_STORE_STATUS = {
-                'REVENUE_AVAILABLE': 'Revenue Available ⚠️',
-                'WAITING_TO_OPEN': 'Waiting To Open ⚠️',
+                'REVENUE_AVAILABLE': 'Revenue Available ⏳',
+                'WAITING_TO_OPEN': 'Waiting To Open ⏳',
                 'CURRENTLY_OPEN': 'Currently Open'
             }
 
@@ -1176,8 +1176,8 @@ async def job2genshinpyzzz():
                     'until_battery_recovery_fmt': '',
                     'current_engagement': notes.engagement.current,
                     'max_engagement': notes.engagement.max,
-                    'engagement_status': '⚠️' if notes.engagement.current < notes.engagement.max else '',
-                    'scratch_card_status': 'Complete' if notes.scratch_card_completed else 'Available ⚠️',
+                    'engagement_status': '⏳' if notes.engagement.current < notes.engagement.max else '',
+                    'scratch_card_status': 'Complete' if notes.scratch_card_completed else 'Available ⏳',
                     'video_store_status': VIDEO_STORE_STATUS[notes.video_store_state.name]
                 }
 
