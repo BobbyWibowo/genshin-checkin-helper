@@ -658,13 +658,15 @@ async def job2genshinpy():
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
      └─ {until_resin_recovery_date_fmt}
     Realm Currency: {realm_currency}
-    Daily Commissions: {tasks}
+    Daily Commissions: {tasks_fmt}
     Encounter Points: {attendances}
-    Long-Term Encounter Points: {stored_attendance} {stored_attendance_refresh_fmt}
     Daily Commission Rewards: {daily_task_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Parametric Transformer: {transformer}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
+
+            ATTENDANCES_TEMPLATE = '''{attendances_fmt}
+    Long-Term Encounter Points: {stored_attendance} {stored_attendance_refresh_fmt}'''
 
             REALM_CURRENCY_TEMPLATE = '''{current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
      └─ {until_realm_currency_recovery_date_fmt}'''
@@ -695,13 +697,9 @@ async def job2genshinpy():
                     'current_resin': notes.current_resin,
                     'max_resin': notes.max_resin,
                     'until_resin_recovery_fmt': '',
-                    'current_realm_currency': notes.current_realm_currency,
-                    'max_realm_currency': notes.max_realm_currency,
-                    'until_realm_currency_recovery_fmt': '',
-                    'tasks': '',
+                    'realm_currency': '',
+                    'tasks_fmt': '',
                     'attendances': '',
-                    'stored_attendance': f'x{notes.daily_task.stored_attendance}',
-                    'stored_attendance_refresh_fmt': '',
                     'daily_task_status': '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
@@ -712,30 +710,38 @@ async def job2genshinpy():
 
                 for task_reward in notes.daily_task.task_rewards:
                     if task_reward.status == 'TaskRewardStatusTakenAward':
-                        data['tasks'] += '✅ '
+                        data['tasks_fmt'] += '✅ '
                     elif task_reward.status == 'TaskRewardStatusFinished':
-                        data['tasks'] += '☑️ '
+                        data['tasks_fmt'] += '☑️ '
                     elif task_reward.status == 'TaskRewardStatusUnfinished':
-                        data['tasks'] += '🔲 '
-                data['tasks'].strip()
+                        data['tasks_fmt'] += '🔲 '
+                data['tasks_fmt'].strip()
 
-                for attendance_reward in notes.daily_task.attendance_rewards:
-                    if attendance_reward.status == 'AttendanceRewardStatusTakenAward':
-                        data['attendances'] += '✅ '
-                    elif attendance_reward.status == 'AttendanceRewardStatusWaitTaken':
-                        data['attendances'] += '☑️ '
-                    elif (attendance_reward.status == 'AttendanceRewardStatusForbid'
-                            or attendance_reward.status == 'AttendanceRewardStatusUnfinished'):
-                        data['attendances'] += '🔲 '
-                data['attendances'].strip()
+                if notes.daily_task.attendance_visible:
+                    data['attendances_fmt'] = ''
+                    for attendance_reward in notes.daily_task.attendance_rewards:
+                        if attendance_reward.status == 'AttendanceRewardStatusTakenAward':
+                            data['attendances_fmt'] += '✅ '
+                        elif attendance_reward.status == 'AttendanceRewardStatusWaitTaken':
+                            data['attendances_fmt'] += '☑️ '
+                        elif (attendance_reward.status == 'AttendanceRewardStatusForbid'
+                                or attendance_reward.status == 'AttendanceRewardStatusUnfinished'):
+                            data['attendances_fmt'] += '🔲 '
+                    data['attendances_fmt'].strip()
+
+                    data['stored_attendance'] = f'x{notes.daily_task.stored_attendance}'
+
+                    until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
+                    data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
+
+                    data['attendances'] = ATTENDANCES_TEMPLATE.format(**data)
+                else:
+                    data['attendances'] = 'N/A'
 
                 if notes.daily_task.claimed_commission_reward:
                     data['daily_task_status'] = 'All Claimed'
                 else:
                     data['daily_task_status'] = 'Available ⏳'
-
-                until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
-                data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
 
                 details = []
 
@@ -776,6 +782,9 @@ async def job2genshinpy():
                 do_realm_currency = bool(notes.max_realm_currency)
                 is_realm_currency_full = is_realm_currency_recovery_time_datetime = False
                 if do_realm_currency:
+                    data['current_realm_currency'] = notes.current_realm_currency
+                    data['max_realm_currency'] = notes.max_realm_currency
+
                     is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
                     is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, dt.datetime)
                     if not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
@@ -787,6 +796,7 @@ async def job2genshinpy():
                             data['until_realm_currency_recovery_date_fmt'] = f"Full at {notes.realm_currency_recovery_time.strftime('%Y-%m-%d %I:%M %p')}"
                     else:
                         data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
+
                     data['realm_currency'] = REALM_CURRENCY_TEMPLATE.format(**data)
                 else:
                     data['realm_currency'] = 'N/A'
