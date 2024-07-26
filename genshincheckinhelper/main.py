@@ -44,7 +44,7 @@ if not config.config_exists:
 version = '1.2.0'
 banner = f'''
 +----------------------------------------------------------------+
-|        𒆙  HoYoverse Check-In Helper v{version}          |
+|             🌠  HoYoverse Check-In Helper v{version}               |
 +----------------------------------------------------------------+
 Project      : genshin-checkin-helper
 Description  : More than check-in for HoYoverse games.
@@ -658,8 +658,10 @@ async def job2genshinpy():
     Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
      └─ {until_resin_recovery_date_fmt}
     Realm Currency: {realm_currency}
-    Daily Commissions: {completed_commissions} / {max_commissions} {commissions_status}
-    Encounter Points: {completed_tasks} / {max_tasks} {tasks_status}
+    Daily Commissions: {tasks}
+    Encounter Points: {attendances}
+    Long-Term Encounter Points: {stored_attendance} {stored_attendance_refresh_fmt}
+    Daily Commission Rewards: {daily_task_status}
     Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
     Parametric Transformer: {transformer}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
@@ -696,12 +698,11 @@ async def job2genshinpy():
                     'current_realm_currency': notes.current_realm_currency,
                     'max_realm_currency': notes.max_realm_currency,
                     'until_realm_currency_recovery_fmt': '',
-                    'completed_commissions': notes.completed_commissions,
-                    'max_commissions': notes.max_commissions,
-                    'commissions_status': '',
-                    'completed_tasks': notes.daily_task.completed_tasks,
-                    'max_tasks': notes.daily_task.max_tasks,
-                    'tasks_status': '',
+                    'tasks': '',
+                    'attendances': '',
+                    'stored_attendance': f'x{notes.daily_task.stored_attendance}',
+                    'stored_attendance_refresh_fmt': '',
+                    'daily_task_status': '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
                     'resin_discounts_status': '⏳' if notes.remaining_resin_discounts > 0 else '',
@@ -709,8 +710,32 @@ async def job2genshinpy():
                     'max_expeditions': notes.max_expeditions
                 }
 
-                if not notes.daily_task.claimed_commission_reward:
-                    data['daily_task_status'] = '⏳'
+                for task_reward in notes.daily_task.task_rewards:
+                    if task_reward.status == 'TaskRewardStatusTakenAward':
+                        data['tasks'] += '✅ '
+                    elif task_reward.status == 'TaskRewardStatusFinished':
+                        data['tasks'] += '☑️ '
+                    elif task_reward.status == 'TaskRewardStatusUnfinished':
+                        data['tasks'] += '🔲 '
+                data['tasks'].strip()
+
+                for attendance_reward in notes.daily_task.attendance_rewards:
+                    if attendance_reward.status == 'AttendanceRewardStatusTakenAward':
+                        data['attendances'] += '✅ '
+                    elif attendance_reward.status == 'AttendanceRewardStatusWaitTaken':
+                        data['attendances'] += '☑️ '
+                    elif (attendance_reward.status == 'AttendanceRewardStatusForbid'
+                            or attendance_reward.status == 'AttendanceRewardStatusUnfinished'):
+                        data['attendances'] += '🔲 '
+                data['attendances'].strip()
+
+                if notes.daily_task.claimed_commission_reward:
+                    data['daily_task_status'] = 'All Claimed'
+                else:
+                    data['daily_task_status'] = 'Available ⏳'
+
+                until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
+                data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
 
                 details = []
 
