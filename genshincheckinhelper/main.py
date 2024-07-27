@@ -1307,19 +1307,22 @@ def schedulecatch(func):
         print(e)
 
 
+async def all_job2():
+    if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
+        await job2genshinpy()
+    if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
+        await job2genshinpystarrail()
+    if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
+        await job2genshinpyzzz()
+
+
 async def run_once():
     try:
         for i in dict(os.environ):
             if 'UID_' in i:
                 del os.environ[i]
 
-        gh.set_lang(config.LANGUAGE)
-        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
-            await job2genshinpy()
-        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
-            await job2genshinpystarrail()
-        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
-            await job2genshinpyzzz()
+        await all_job2()
         await job1()
     except Exception as e:
         print(e)
@@ -1327,25 +1330,20 @@ async def run_once():
 
 async def main():
     log.info(banner)
+
+    gh.set_lang(config.LANGUAGE)
+
     await run_once()
 
-    schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
-
+    # schedule all_job2()
     if config.CHECK_NOTES_SECS_RANGE:
         t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
-        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpy))
-        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
-        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(job2genshinpyzzz))
+        schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(all_job2))
     else:
-        if config.GENSHINPY.get('cookies') and not config.GENSHINPY.get('skip_notes'):
-            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpy))
-        if config.GENSHINPY_STARRAIL.get('cookies') and not config.GENSHINPY_STARRAIL.get('skip_notes'):
-            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpystarrail))
-        if config.GENSHINPY_ZZZ.get('cookies') and not config.GENSHINPY_ZZZ.get('skip_notes'):
-            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(job2genshinpyzzz))
+        schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(all_job2))
+
+    # schedule job1()
+    schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
 
     while True:
         await asyncio.sleep(1)
