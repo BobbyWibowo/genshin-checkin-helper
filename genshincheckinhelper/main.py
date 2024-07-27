@@ -739,7 +739,7 @@ async def job2genshinpy():
                 if notes.daily_task.claimed_commission_reward:
                     data['daily_task_status'] = 'All Claimed'
                 else:
-                    data['daily_task_status'] = 'Available ⏳'
+                    data['daily_task_status'] = f'{notes.daily_task.completed_tasks} / {notes.daily_task.max_tasks} ⏳'
 
                 details = []
 
