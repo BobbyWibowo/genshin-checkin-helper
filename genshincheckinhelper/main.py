@@ -631,8 +631,8 @@ async def job1():
 
 
 async def job2genshinpy():
-    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
-    if (config.GENSHINPY.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+    if (config.GENSHINPY.get('suspend_check_notes_during_dnd')
+            and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
         log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
@@ -898,36 +898,36 @@ async def job2genshinpy():
                         os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(until_transformer_recovery)
                         is_transformer_recovery_time_changed = int(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) < until_transformer_recovery
 
-                if is_full and is_resin_notify and not is_do_not_disturb:
+                if is_full and is_resin_notify:
                     os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
                     status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_threshold and is_resin_threshold_notify and not is_do_not_disturb:
+                elif is_threshold and is_resin_threshold_notify:
                     status = 'Original Resin is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) + 1)
                 elif is_resin_recovery_time_changed and not is_full:
                     status = 'Original Resin\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_realm_currency_full and is_realm_currency_notify and not is_do_not_disturb:
+                elif is_realm_currency_full and is_realm_currency_notify:
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) + 1)
                     status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_realm_currency_threshold and is_realm_currency_threshold_notify and not is_do_not_disturb:
+                elif is_realm_currency_threshold and is_realm_currency_threshold_notify:
                     status = 'Realm Currency is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
                 elif is_realm_currency_recovery_time_changed and not is_realm_currency_full:
                     status = 'Realm Currency\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_transformer_ready and is_transformer_notify and not is_do_not_disturb:
+                elif is_transformer_ready and is_transformer_notify:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
                     status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_transformer_recovery_time_changed and not is_transformer_ready:
                     status = 'Parametric Transformer\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                     status = f"Expedition{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
                     os.environ[IS_NOTIFY_STR] = 'True'
@@ -966,8 +966,8 @@ async def job2genshinpy():
 
 
 async def job2genshinpystarrail():
-    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
-    if (config.GENSHINPY_STARRAIL.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+    if (config.GENSHINPY_STARRAIL.get('suspend_check_notes_during_dnd')
+            and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
         log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
@@ -1112,18 +1112,18 @@ async def job2genshinpystarrail():
                     is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - notes.stamina_recovery_time.timestamp()) > 400
                 is_any_expedition_completed = data['completed_expeditions'] > 0
 
-                if is_full and is_stamina_notify and not is_do_not_disturb:
+                if is_full and is_stamina_notify:
                     os.environ[STAMINA_NOTIFY_CNT_STR] = str(int(os.environ[STAMINA_NOTIFY_CNT_STR]) + 1)
                     status = f'Trailblaze Power is full! ({os.environ[STAMINA_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_threshold and is_stamina_threshold_notify and not is_do_not_disturb:
+                elif is_threshold and is_stamina_threshold_notify:
                     status = 'Trailblaze Power is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) + 1)
                 elif is_stamina_recovery_time_changed and not is_full:
                     status = 'Trailblaze Power\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count and not is_do_not_disturb:
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
                     status = f"Assignment{'s' if data['completed_expeditions'] > 1 else ''} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})"
                     os.environ[IS_NOTIFY_STR] = 'True'
@@ -1151,8 +1151,8 @@ async def job2genshinpystarrail():
 
 
 async def job2genshinpyzzz():
-    is_do_not_disturb = time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)
-    if (config.GENSHINPY_ZZZ.get('suspend_check_notes_during_dnd') and is_do_not_disturb):
+    if (config.GENSHINPY_ZZZ.get('suspend_check_notes_during_dnd')
+            and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
         log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
@@ -1267,11 +1267,11 @@ async def job2genshinpyzzz():
                     os.environ[BATTERY_LAST_RECOVERY_TIME] = os.environ[BATTERY_LAST_RECOVERY_TIME] if os.environ.get(BATTERY_LAST_RECOVERY_TIME) else str(notes.battery_charge.full_datetime.timestamp())
                     is_battery_recovery_time_changed = abs(float(os.environ[BATTERY_LAST_RECOVERY_TIME]) - notes.battery_charge.full_datetime.timestamp()) > 400
 
-                if is_full and is_battery_notify and not is_do_not_disturb:
+                if is_full and is_battery_notify:
                     os.environ[BATTERY_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_NOTIFY_CNT_STR]) + 1)
                     status = f'Battery Charge is full! ({os.environ[BATTERY_NOTIFY_CNT_STR]}/{count})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_threshold and is_battery_threshold_notify and not is_do_not_disturb:
+                elif is_threshold and is_battery_threshold_notify:
                     status = 'Battery Charge is almost full!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                     os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR]) + 1)
