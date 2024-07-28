@@ -633,7 +633,7 @@ async def job1():
 async def job2genshinpy():
     if (config.GENSHINPY.get('suspend_check_notes_during_dnd')
             and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
-        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
+        log.info('job2genshinpy() skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
     log.info('Starting real-time notes tasks for Genshin Impact...')
@@ -968,7 +968,7 @@ async def job2genshinpy():
 async def job2genshinpystarrail():
     if (config.GENSHINPY_STARRAIL.get('suspend_check_notes_during_dnd')
             and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
-        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
+        log.info('job2genshinpystarrail() skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
     log.info('Starting real-time notes tasks for Honkai: Star Rail...')
@@ -1153,7 +1153,7 @@ async def job2genshinpystarrail():
 async def job2genshinpyzzz():
     if (config.GENSHINPY_ZZZ.get('suspend_check_notes_during_dnd')
             and time_in_range(config.NOTES_TIMER_DO_NOT_DISTURB)):
-        log.info('Task skipped due to "suspend_check_notes_during_dnd" option.')
+        log.info('job2genshinpyzzz() skipped due to "suspend_check_notes_during_dnd" option.')
         return
 
     log.info('Starting real-time notes tasks for Zenless Zone Zero...')
