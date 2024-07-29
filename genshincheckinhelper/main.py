@@ -8,7 +8,7 @@
 from collections.abc import Iterable
 from inspect import iscoroutinefunction
 from math import ceil
-#from pprint import pprint
+from pprint import pprint
 from random import randint
 from time import sleep
 from typing import Tuple
@@ -228,11 +228,15 @@ async def solve_geetest(client: genshin.Client, gt, challenge):
     return 0
 
 
-async def call_safely(client: genshin.Client, func, *args, **kwargs):
+async def call_safely(client: genshin.Client, func, *args, **kwargs) -> tuple[any, bool]:
+    geetest_triggered = False
+
     try:
         _ = await func(*args, **kwargs)
     except genshin.GeetestError as e:
         log.info('Geetest triggered...')
+        geetest_triggered = True
+
         mmt = await client.create_mmt()
 
         solution = await solve_geetest(client, mmt.gt, mmt.challenge)
@@ -249,6 +253,7 @@ async def call_safely(client: genshin.Client, func, *args, **kwargs):
         _ = await func(*args, **kwargs)
     except genshin.DailyGeetestTriggered as e:
         log.info('Geetest triggered during daily reward claim...')
+        geetest_triggered = True
 
         solution = await solve_geetest(client, e.gt, e.challenge)
         if solution == 0:
@@ -256,7 +261,7 @@ async def call_safely(client: genshin.Client, func, *args, **kwargs):
 
         _ = await func(*args, **dict(kwargs, challenge=solution))
 
-    return _
+    return _, geetest_triggered
 
 
 async def taskgenshinpy(cookie):
@@ -271,14 +276,13 @@ async def taskgenshinpy(cookie):
         if not _accounts:
             return log.info('There are no Genshin accounts associated to this HoYoverse account.')
 
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} day(s)
+    Status: {status}'''
+
         DIARY_TEMPLATE = '''    {display_name}'s Diary: {month}
     💠 Primogems: {current_primogems}
     🌕 Mora: {current_mora}'''
-
-        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}
-'''
 
         accounts = None
         if config.GENSHINPY.get('uids'):
@@ -304,9 +308,13 @@ async def taskgenshinpy(cookie):
             result.append(message)
 
         data = {}
+        geetest_triggered = False
+
         try:
             log.info('Preparing to claim daily reward...')
-            reward: genshin.models.DailyReward = await call_safely(client, client.claim_daily_reward)
+            response: tuple[genshin.models.DailyReward, bool] = await call_safely(client, client.claim_daily_reward)
+            reward = response[0]
+            geetest_triggered = response[1]
         except genshin.AlreadyClaimed:
             log.info('Preparing to get claimed reward information...')
             claimed = await client.claimed_rewards(limit=1)
@@ -340,10 +348,13 @@ async def taskgenshinpy(cookie):
                     'current_mora': diary.data.current_mora
                 }
                 daily_addons = DIARY_TEMPLATE.format(**diary_data)
-                result.append(daily_addons)
+                result.append(f'\n{daily_addons}')
             except Exception as e:
                 log.warning(str(e))
-                result.append('    Unable to get traveler\'s diary.')
+                result.append('\n    Unable to get traveler\'s diary.')
+
+        if geetest_triggered:
+            result.append('\n🤖 Geetest captcha triggered for this request.')
     finally:
         log.info('Task finished.')
     return result
@@ -389,9 +400,13 @@ async def taskgenshinpyhonkai(cookie):
             result.append(message)
 
         data = {}
+        geetest_triggered = False
+
         try:
             log.info('Preparing to claim daily reward...')
-            reward: genshin.models.DailyReward = await call_safely(client, client.claim_daily_reward)
+            response: tuple[genshin.models.DailyReward, bool] = await call_safely(client, client.claim_daily_reward)
+            reward = response[0]
+            geetest_triggered = response[1]
         except genshin.AlreadyClaimed:
             log.info('Preparing to get claimed reward information...')
             claimed = await client.claimed_rewards(limit=1)
@@ -408,6 +423,9 @@ async def taskgenshinpyhonkai(cookie):
         data['claimed_rewards'] = reward_info.claimed_rewards
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
+
+        if geetest_triggered:
+            result.append('\n🤖 Geetest captcha triggered for this request.')
     finally:
         log.info('Task finished.')
     return result
@@ -425,14 +443,13 @@ async def taskgenshinpystarrail(cookie):
         if not _accounts:
             return log.info('There are no Star Rail accounts associated to this HoYoverse account.')
 
+        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
+    Total monthly check-ins: {claimed_rewards} day(s)
+    Status: {status}'''
+
         DIARY_TEMPLATE = '''    {display_name}'s Monthly Calendar: {month}
     💎 Stellar Jade: {current_hcoin}
     🎫 Pass & Special Pass: {current_rails_pass}'''
-
-        CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
-    Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}
-'''
 
         accounts = None
         if config.GENSHINPY_STARRAIL.get('uids'):
@@ -458,9 +475,13 @@ async def taskgenshinpystarrail(cookie):
             result.append(message)
 
         data = {}
+        geetest_triggered = False
+
         try:
             log.info('Preparing to claim daily reward...')
-            reward: genshin.models.DailyReward = await call_safely(client, client.claim_daily_reward)
+            response: tuple[genshin.models.DailyReward, bool] = await call_safely(client, client.claim_daily_reward)
+            reward = response[0]
+            geetest_triggered = response[1]
         except genshin.AlreadyClaimed:
             log.info('Preparing to get claimed reward information...')
             claimed = await client.claimed_rewards(limit=1)
@@ -476,6 +497,7 @@ async def taskgenshinpystarrail(cookie):
         reward_info = await client.get_reward_info()
         data['claimed_rewards'] = reward_info.claimed_rewards
         claim_message = CLAIM_TEMPLATE.format(**data)
+
         result.append(claim_message)
 
         if not config.GENSHINPY_STARRAIL.get('skip_diary'):
@@ -489,10 +511,13 @@ async def taskgenshinpystarrail(cookie):
                     'current_rails_pass': diary.data.current_rails_pass
                 }
                 daily_addons = DIARY_TEMPLATE.format(**diary_data)
-                result.append(daily_addons)
+                result.append(f'\n{daily_addons}')
             except Exception as e:
                 log.warning(str(e))
-                result.append('    Unable to get trailblazer\'s monthly calendar.')
+                result.append('\n    Unable to get trailblazer\'s monthly calendar.')
+
+        if geetest_triggered:
+            result.append('\n🤖 Geetest captcha triggered for this request.')
     finally:
         log.info('Task finished.')
     return result
@@ -512,8 +537,7 @@ async def taskgenshinpyzzz(cookie):
 
         CLAIM_TEMPLATE = '''    Today's reward: {name} x {amount}
     Total monthly check-ins: {claimed_rewards} day(s)
-    Status: {status}
-'''
+    Status: {status}'''
 
         accounts = None
         if config.GENSHINPY_ZZZ.get('uids'):
@@ -539,9 +563,13 @@ async def taskgenshinpyzzz(cookie):
             result.append(message)
 
         data = {}
+        geetest_triggered = False
+
         try:
             log.info('Preparing to claim daily reward...')
-            reward: genshin.models.DailyReward = await call_safely(client, client.claim_daily_reward)
+            response: tuple[genshin.models.DailyReward, bool] = await call_safely(client, client.claim_daily_reward)
+            reward = response[0]
+            geetest_triggered = response[1]
         except genshin.AlreadyClaimed:
             log.info('Preparing to get claimed reward information...')
             claimed = await client.claimed_rewards(limit=1)
@@ -558,6 +586,9 @@ async def taskgenshinpyzzz(cookie):
         data['claimed_rewards'] = reward_info.claimed_rewards
         claim_message = CLAIM_TEMPLATE.format(**data)
         result.append(claim_message)
+
+        if geetest_triggered:
+            result.append('\n🤖 Geetest captcha triggered for this request.')
     finally:
         log.info('Task finished.')
     return result
@@ -709,7 +740,9 @@ async def job2genshinpy():
             for account in accounts:
                 log.info(f'Preparing to get notes information for UID {account.uid}...')
                 client.uid = account.uid
-                notes: genshin.models.Notes = await call_safely(client, client.get_genshin_notes)
+                response: tuple[genshin.models.Notes, bool] = await call_safely(client, client.get_genshin_notes)
+                notes = response[0]
+                geetest_triggered = response[1]
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
@@ -850,6 +883,10 @@ async def job2genshinpy():
                 message = RESIN_TIMER_TEMPLATE.format(**data)
                 if details:
                     message += '\n     '.join([''] + details)
+
+                if geetest_triggered:
+                    message += '\n🤖 Geetest captcha triggered for this request.'
+
                 result.append(message)
                 log.info(message)
 
@@ -1031,7 +1068,9 @@ async def job2genshinpystarrail():
             for account in accounts:
                 log.info(f'Preparing to get notes information for UID {account.uid}...')
                 client.uid = account.uid
-                notes: genshin.models.StarRailNote = await call_safely(client, client.get_starrail_notes)
+                response: tuple[genshin.models.StarRailNote, bool] = await call_safely(client, client.get_starrail_notes)
+                notes = response[0]
+                geetest_triggered = response[1]
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
@@ -1096,6 +1135,10 @@ async def job2genshinpystarrail():
                 message = STAMINA_TIMER_TEMPLATE.format(**data)
                 if details:
                     message += '\n     '.join([''] + details)
+
+                if geetest_triggered:
+                    message += '\n🤖 Geetest captcha triggered for this request.'
+
                 result.append(message)
                 log.info(message)
 
@@ -1219,7 +1262,9 @@ async def job2genshinpyzzz():
             for account in accounts:
                 log.info(f'Preparing to get notes information for UID {account.uid}...')
                 client.uid = account.uid
-                notes: genshin.models.ZZZNotes = await call_safely(client, client.get_zzz_notes)
+                response: tuple[genshin.models.ZZZNotes, bool] = await call_safely(client, client.get_zzz_notes)
+                notes = response[0]
+                geetest_triggered = response[1]
 
                 timezone, utc_offset_str = assert_timezone(server=account.server)
                 data = {
@@ -1254,6 +1299,10 @@ async def job2genshinpyzzz():
                 message = BATTERY_TIMER_TEMPLATE.format(**data)
                 if details:
                     message += '\n     '.join([''] + details)
+
+                if geetest_triggered:
+                    message += '\n🤖 Geetest captcha triggered for this request.'
+
                 result.append(message)
                 log.info(message)
 
