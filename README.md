@@ -1,6 +1,6 @@
 # genshin-checkin-helper
 
-> Requires Python **3.8.x** ~ **3.11.x**.  
+> Requires Python **3.9.x** ~ **3.11.x**.  
 > Not yet ready for Python 3.12.x.
 
 More than check-in for ~~Genshin Impact~~ HoYoverse games.
