@@ -6,12 +6,12 @@ authors = ["Bobby <bobby@fiery.me>"]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
+python = "^3.9, <3.12"
 genshinhelper = {git = "https://github.com/y1ndan/genshinhelper2.git", rev = "1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd"}
 onepush = "^1.3.0"
 schedule = "^1.2.1"
 nest-asyncio = "^1.6.0"
-genshin = {git = "https://github.com/thesadru/genshin.py", rev = "348a3c7b30ee2185c80390f33da6daa260980721"}
+genshin = "^1.7.2"
 aiohttp = "^3.9.5"
 pydantic = "^2.7.1"
 anticaptchaofficial = "^1.0.60"
