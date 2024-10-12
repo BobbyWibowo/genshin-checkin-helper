@@ -894,7 +894,6 @@ async def job2genshinpy():
                 content = f'```\n{message}```' if is_markdown else message
                 status = 'Push conditions have not been met yet, will re-check later as scheduled.'
 
-                count = 3
                 IS_NOTIFY_STR = f'UID_{account.uid}_IS_NOTIFY_STR'
                 RESIN_NOTIFY_CNT_STR = f'UID_{account.uid}_RESIN_NOTIFY_CNT'
                 RESIN_THRESHOLD_NOTIFY_CNT_STR = f'UID_{account.uid}_RESIN_THRESHOLD_NOTIFY_CNT'
@@ -923,7 +922,7 @@ async def job2genshinpy():
                 except:
                     pass
 
-                is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) < count
+                is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_resin_recovery_time_changed = False
                 if is_resin_recovery_time_datetime:
@@ -944,7 +943,7 @@ async def job2genshinpy():
                             is_realm_currency_threshold = notes.current_realm_currency >= realm_currency_threshold
                     except:
                         pass
-                    is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) < count
+                    is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY
                     is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
                     if is_realm_currency_recovery_time_datetime:
                         os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
@@ -953,14 +952,14 @@ async def job2genshinpy():
                 is_transformer_notify = is_transformer_recovery_time_changed = False
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
-                    is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) < count
+                    is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY
                     if until_transformer_recovery:
                         os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(until_transformer_recovery)
                         is_transformer_recovery_time_changed = int(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) < until_transformer_recovery
 
                 if is_full and is_resin_notify:
                     os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
-                    status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Original Resin is full! ({os.environ[RESIN_NOTIFY_CNT_STR]}/{config.FULL_STAMINA_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_threshold and is_resin_threshold_notify:
                     status = 'Original Resin is almost full!'
@@ -971,7 +970,7 @@ async def job2genshinpy():
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_realm_currency_full and is_realm_currency_notify:
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = str(int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) + 1)
-                    status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Realm Currency is full! ({os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]}/{config.FULL_EXTRAS_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_realm_currency_threshold and is_realm_currency_threshold_notify:
                     status = 'Realm Currency is almost full!'
@@ -982,14 +981,14 @@ async def job2genshinpy():
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_transformer_ready and is_transformer_notify:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
-                    status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{config.FULL_EXTRAS_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_transformer_recovery_time_changed and not is_transformer_ready:
                     status = 'Parametric Transformer\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
-                    status = f'Expedition{"s" if data["completed_expeditions"] > 1 else ""} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Expedition{"s" if data["completed_expeditions"] > 1 else ""} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{config.FULL_EXTRAS_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_first_run:
                     status = 'Real-Time Notes is being monitored!'
@@ -1146,7 +1145,6 @@ async def job2genshinpystarrail():
                 content = f'```\n{message}```' if is_markdown else message
                 status = 'Push conditions have not been met yet, will re-check later as scheduled.'
 
-                count = 3
                 IS_NOTIFY_STR = f'UID_SR_{account.uid}_IS_NOTIFY_STR'
                 STAMINA_NOTIFY_CNT_STR = f'UID_SR_{account.uid}_STAMINA_NOTIFY_CNT'
                 STAMINA_THRESHOLD_NOTIFY_CNT_STR = f'UID_SR_{account.uid}_STAMINA_THRESHOLD_NOTIFY_CNT'
@@ -1170,7 +1168,7 @@ async def job2genshinpystarrail():
                 except:
                     pass
 
-                is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) < count
+                is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_stamina_threshold_notify = int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_stamina_recovery_time_changed = False
                 if is_stamina_recovery_time_datetime:
@@ -1180,7 +1178,7 @@ async def job2genshinpystarrail():
 
                 if is_full and is_stamina_notify:
                     os.environ[STAMINA_NOTIFY_CNT_STR] = str(int(os.environ[STAMINA_NOTIFY_CNT_STR]) + 1)
-                    status = f'Trailblaze Power is full! ({os.environ[STAMINA_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Trailblaze Power is full! ({os.environ[STAMINA_NOTIFY_CNT_STR]}/{config.FULL_STAMINA_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_threshold and is_stamina_threshold_notify:
                     status = 'Trailblaze Power is almost full!'
@@ -1189,9 +1187,9 @@ async def job2genshinpystarrail():
                 elif is_stamina_recovery_time_changed and not is_full:
                     status = 'Trailblaze Power\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) < count:
+                elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY:
                     os.environ[EXPEDITION_NOTIFY_CNT_STR] = str(int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) + 1)
-                    status = f'Assignment{"s" if data["completed_expeditions"] > 1 else ""} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Assignment{"s" if data["completed_expeditions"] > 1 else ""} completed! ({os.environ[EXPEDITION_NOTIFY_CNT_STR]}/{config.FULL_EXTRAS_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_first_run:
                     status = 'Real-Time Notes is being monitored!'
@@ -1310,7 +1308,6 @@ async def job2genshinpyzzz():
                 content = f'```\n{message}```' if is_markdown else message
                 status = 'Push conditions have not been met yet, will re-check later as scheduled.'
 
-                count = 3
                 IS_NOTIFY_STR = f'UID_ZZZ_{account.uid}_IS_NOTIFY_STR'
                 BATTERY_NOTIFY_CNT_STR = f'UID_ZZZ_{account.uid}_BATTERY_NOTIFY_CNT'
                 BATTERY_THRESHOLD_NOTIFY_CNT_STR = f'UID_ZZZ_{account.uid}_BATTERY_THRESHOLD_NOTIFY_CNT'
@@ -1332,7 +1329,7 @@ async def job2genshinpyzzz():
                 except:
                     pass
 
-                is_battery_notify = int(os.environ[BATTERY_NOTIFY_CNT_STR]) < count
+                is_battery_notify = int(os.environ[BATTERY_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_battery_threshold_notify = int(os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_battery_recovery_time_changed = False
                 if is_battery_recovery_time_datetime:
@@ -1341,7 +1338,7 @@ async def job2genshinpyzzz():
 
                 if is_full and is_battery_notify:
                     os.environ[BATTERY_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_NOTIFY_CNT_STR]) + 1)
-                    status = f'Battery Charge is full! ({os.environ[BATTERY_NOTIFY_CNT_STR]}/{count})'
+                    status = f'Battery Charge is full! ({os.environ[BATTERY_NOTIFY_CNT_STR]}/{config.FULL_STAMINA_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_threshold and is_battery_threshold_notify:
                     status = 'Battery Charge is almost full!'
