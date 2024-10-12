@@ -836,13 +836,12 @@ async def job2genshinpy():
                         data['until_resin_recovery_date_fmt'] = f'Full at {notes.resin_recovery_time.strftime("%Y-%m-%d %I:%M %p")}'
 
                 do_realm_currency = bool(notes.max_realm_currency)
-                is_realm_currency_full = is_realm_currency_recovery_time_datetime = False
+                is_realm_currency_full = False
                 if do_realm_currency:
                     data['current_realm_currency'] = notes.current_realm_currency
                     data['max_realm_currency'] = notes.max_realm_currency
 
                     is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
-                    is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, dt.datetime)
                     if is_realm_currency_full:
                         data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
                     else:
@@ -946,17 +945,15 @@ async def job2genshinpy():
                         pass
                     is_realm_currency_notify = int(os.environ[REALM_CURRENCY_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY
                     is_realm_currency_threshold_notify = int(os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR]) < 1
-                    if is_realm_currency_recovery_time_datetime:
-                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
-                        is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovery_time.timestamp()) > 400
+                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
+                    is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovery_time.timestamp()) > 400
 
                 is_transformer_notify = is_transformer_recovery_time_changed = False
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
                     is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY
-                    if until_transformer_recovery:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(until_transformer_recovery)
-                        is_transformer_recovery_time_changed = int(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) < until_transformer_recovery
+                    os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(notes.transformer_recovery_time.timestamp())
+                    is_transformer_recovery_time_changed = abs(float(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) - notes.transformer_recovery_time.timestamp()) > 400
 
                 if is_full and is_resin_notify:
                     os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
@@ -1003,13 +1000,11 @@ async def job2genshinpy():
                 if do_realm_currency:
                     os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_NOTIFY_CNT_STR] if is_realm_currency_full else '0'
                     os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR] if is_realm_currency_threshold else '0'
-                    if is_realm_currency_recovery_time_datetime:
-                        os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovery_time.timestamp())
+                    os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = str(notes.realm_currency_recovery_time.timestamp())
 
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if is_transformer_ready else '0'
-                    if until_transformer_recovery:
-                        os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(until_transformer_recovery)
+                    os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(notes.transformer_recovery_time.timestamp())
 
                 title = status
                 log.info(title)
