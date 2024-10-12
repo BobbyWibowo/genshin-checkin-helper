@@ -786,7 +786,7 @@ async def job2genshinpy():
                     data['stored_attendance'] = f'x{notes.daily_task.stored_attendance}'
 
                     if isinstance(notes.daily_task.stored_attendance_refresh_countdown, dt.timedelta):
-                        until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
+                        until_stored_attendance_refresh = ceil(notes.daily_task.stored_attendance_refresh_countdown.total_seconds())
                         data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
                     else:
                         data['stored_attendance_refresh_fmt'] = ''
@@ -812,7 +812,7 @@ async def job2genshinpy():
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = expedition.remaining_time.total_seconds()
+                        remaining_time = ceil(expedition.remaining_time.total_seconds())
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -828,7 +828,7 @@ async def job2genshinpy():
                 if is_full:
                     data['until_resin_recovery_date_fmt'] = '✨ Full!'
                 else:
-                    until_resin_recovery = notes.remaining_resin_recovery_time.total_seconds()
+                    until_resin_recovery = ceil(notes.remaining_resin_recovery_time.total_seconds())
                     data['until_resin_recovery_fmt'] = f' ({display_time(seconds_to_time(until_resin_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_resin_recovery_date_fmt'] = f'Full at {notes.resin_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
@@ -846,7 +846,7 @@ async def job2genshinpy():
                     if is_realm_currency_full:
                         data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
                     else:
-                        until_realm_currency_recovery = notes.remaining_realm_currency_recovery_time.total_seconds()
+                        until_realm_currency_recovery = ceil(notes.remaining_realm_currency_recovery_time.total_seconds())
                         data['until_realm_currency_recovery_fmt'] = f' ({display_time(seconds_to_time(until_realm_currency_recovery), short=True, min_units=2, max_units=2)})'
                         if timezone:
                             data['until_realm_currency_recovery_date_fmt'] = f'Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
@@ -860,7 +860,7 @@ async def job2genshinpy():
                 do_transformer = notes.remaining_transformer_recovery_time != None
                 is_transformer_ready = until_transformer_recovery = False
                 if do_transformer:
-                    until_transformer_recovery = notes.remaining_transformer_recovery_time.total_seconds()
+                    until_transformer_recovery = ceil(notes.remaining_transformer_recovery_time.total_seconds())
                     if until_transformer_recovery > 0:
                         recovery_date_fmt = '%Y-%m-%d'
                         if notes.remaining_transformer_recovery_time.minutes or notes.remaining_transformer_recovery_time.seconds:
@@ -1105,7 +1105,7 @@ async def job2genshinpystarrail():
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = expedition.remaining_time.total_seconds()
+                        remaining_time = ceil(expedition.remaining_time.total_seconds())
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -1121,7 +1121,7 @@ async def job2genshinpystarrail():
                 if is_full:
                     data['until_stamina_recovery_date_fmt'] = '✨ Full!'
                 else:
-                    until_stamina_recovery = notes.stamina_recover_time.total_seconds()
+                    until_stamina_recovery = ceil(notes.stamina_recover_time.total_seconds())
                     data['until_stamina_recovery_fmt'] = f' ({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_stamina_recovery_date_fmt'] = f'Full at {notes.stamina_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
