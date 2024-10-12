@@ -903,7 +903,7 @@ async def job2genshinpy():
                 REALM_CURRENCY_THRESHOLD_NOTIFY_CNT_STR = f'UID_{account.uid}_REALM_CURRENCY_THRESHOLD_NOTIFY_CNT'
                 REALM_CURRENCY_LAST_RECOVERY_TIME = f'UID_{account.uid}_REALM_CURRENCY_LAST_RECOVERY_TIME'
                 TRANSFORMER_NOTIFY_CNT_STR = f'UID_{account.uid}_TRANSFORMER_NOTIFY_CNT'
-                TRANSFORMER_LAST_RECOVERY_TIME = f'UID_{account.uid}_TRANSFORMER_LAST_RECOVERY_TIME'
+                TRANSFORMER_WAS_READY_STR = f'UID_{account.uid}_TRANSFORMER_WAS_READY'
                 EXPEDITION_NOTIFY_CNT_STR = f'UID_{account.uid}_EXPEDITION_NOTIFY_CNT'
 
                 is_first_run = not bool(os.environ.get(IS_NOTIFY_STR))
@@ -948,12 +948,13 @@ async def job2genshinpy():
                     os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] = os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME] if os.environ.get(REALM_CURRENCY_LAST_RECOVERY_TIME) else str(notes.realm_currency_recovery_time.timestamp())
                     is_realm_currency_recovery_time_changed = abs(float(os.environ[REALM_CURRENCY_LAST_RECOVERY_TIME]) - notes.realm_currency_recovery_time.timestamp()) > 400
 
-                is_transformer_notify = is_transformer_recovery_time_changed = False
+                is_transformer_notify = is_transformer_ready_status_changed = False
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if os.environ.get(TRANSFORMER_NOTIFY_CNT_STR) else '0'
                     is_transformer_notify = int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY
-                    os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = os.environ[TRANSFORMER_LAST_RECOVERY_TIME] if os.environ.get(TRANSFORMER_LAST_RECOVERY_TIME) else str(notes.transformer_recovery_time.timestamp())
-                    is_transformer_recovery_time_changed = abs(float(os.environ[TRANSFORMER_LAST_RECOVERY_TIME]) - notes.transformer_recovery_time.timestamp()) > 400
+                    os.environ[TRANSFORMER_WAS_READY_STR] = os.environ[TRANSFORMER_WAS_READY_STR] if os.environ.get(TRANSFORMER_WAS_READY_STR) else ('True' if is_transformer_ready else 'False')
+                    was_transformer_ready = os.environ[TRANSFORMER_WAS_READY_STR] == 'True'
+                    is_transformer_ready_status_changed = was_transformer_ready != is_transformer_ready
 
                 if is_full and is_resin_notify:
                     os.environ[RESIN_NOTIFY_CNT_STR] = str(int(os.environ[RESIN_NOTIFY_CNT_STR]) + 1)
@@ -981,7 +982,7 @@ async def job2genshinpy():
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = str(int(os.environ[TRANSFORMER_NOTIFY_CNT_STR]) + 1)
                     status = f'Parametric Transformer is ready! ({os.environ[TRANSFORMER_NOTIFY_CNT_STR]}/{config.FULL_EXTRAS_REPEAT_NOTIFY + 1})'
                     os.environ[IS_NOTIFY_STR] = 'True'
-                elif is_transformer_recovery_time_changed and not is_transformer_ready:
+                elif is_transformer_ready_status_changed and not is_transformer_ready:
                     status = 'Parametric Transformer\'s recovery time has changed!'
                     os.environ[IS_NOTIFY_STR] = 'True'
                 elif is_any_expedition_completed and int(os.environ[EXPEDITION_NOTIFY_CNT_STR]) <= config.FULL_EXTRAS_REPEAT_NOTIFY:
@@ -1004,7 +1005,7 @@ async def job2genshinpy():
 
                 if do_transformer:
                     os.environ[TRANSFORMER_NOTIFY_CNT_STR] = os.environ[TRANSFORMER_NOTIFY_CNT_STR] if is_transformer_ready else '0'
-                    os.environ[TRANSFORMER_LAST_RECOVERY_TIME] = str(notes.transformer_recovery_time.timestamp())
+                    os.environ[TRANSFORMER_WAS_READY_STR] = 'True' if is_transformer_ready else 'False'
 
                 title = status
                 log.info(title)
