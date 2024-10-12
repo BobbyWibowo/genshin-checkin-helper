@@ -709,20 +709,20 @@ async def job2genshinpy():
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
-    Original Resin: {current_resin} / {max_resin} {until_resin_recovery_fmt}
+    Original Resin: {current_resin} / {max_resin}{until_resin_recovery_fmt}
      └─ {until_resin_recovery_date_fmt}
     Realm Currency: {realm_currency}
     Daily Commissions: {tasks_fmt}
     Encounter Points: {attendances}
     Daily Commission Rewards: {daily_task_status}
-    Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts} {resin_discounts_status}
+    Enemies of Note: {remaining_resin_discounts} / {max_resin_discounts}{resin_discounts_status}
     Parametric Transformer: {transformer}
     Expedition Limit: {completed_expeditions} / {max_expeditions}'''
 
             ATTENDANCES_TEMPLATE = '''{attendances_fmt}
-    Long-Term Encounter Points: {stored_attendance} {stored_attendance_refresh_fmt}'''
+    Long-Term Encounter Points: {stored_attendance}{stored_attendance_refresh_fmt}'''
 
-            REALM_CURRENCY_TEMPLATE = '''{current_realm_currency} / {max_realm_currency} {until_realm_currency_recovery_fmt}
+            REALM_CURRENCY_TEMPLATE = '''{current_realm_currency} / {max_realm_currency}{until_realm_currency_recovery_fmt}
      └─ {until_realm_currency_recovery_date_fmt}'''
 
             TRANSFORMER_TEMPLATE = '''{until_transformer_recovery_fmt}
@@ -759,7 +759,7 @@ async def job2genshinpy():
                     'daily_task_status': '',
                     'remaining_resin_discounts': notes.remaining_resin_discounts,
                     'max_resin_discounts': notes.max_resin_discounts,
-                    'resin_discounts_status': '⏳' if notes.remaining_resin_discounts > 0 else '',
+                    'resin_discounts_status': ' ⏳' if notes.remaining_resin_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'max_expeditions': notes.max_expeditions
                 }
@@ -785,8 +785,11 @@ async def job2genshinpy():
 
                     data['stored_attendance'] = f'x{notes.daily_task.stored_attendance}'
 
-                    until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
-                    data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
+                    if isinstance(notes.daily_task.stored_attendance_refresh_countdown, dt.timedelta):
+                        until_stored_attendance_refresh = notes.daily_task.stored_attendance_refresh_countdown.total_seconds()
+                        data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
+                    else:
+                        data['stored_attendance_refresh_fmt'] = ''
 
                     data['attendances'] = ATTENDANCES_TEMPLATE.format(**data)
                 else:
@@ -809,7 +812,7 @@ async def job2genshinpy():
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - dt.datetime.now()).total_seconds(), 0)
+                        remaining_time = expedition.remaining_time.total_seconds()
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -822,16 +825,15 @@ async def job2genshinpy():
                         details.append(f'└─ Earliest at {earliest_expedition.strftime("%Y-%m-%d %I:%M %p")}')
 
                 is_full = notes.current_resin >= notes.max_resin
-                is_resin_recovery_time_datetime = isinstance(notes.resin_recovery_time, dt.datetime)
-                if not is_full and is_resin_recovery_time_datetime:
-                    until_resin_recovery = (notes.resin_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
-                    data['until_resin_recovery_fmt'] = f'({display_time(seconds_to_time(until_resin_recovery), short=True, min_units=2, max_units=2)})'
+                if is_full:
+                    data['until_resin_recovery_date_fmt'] = '✨ Full!'
+                else:
+                    until_resin_recovery = notes.remaining_resin_recovery_time.total_seconds()
+                    data['until_resin_recovery_fmt'] = f' ({display_time(seconds_to_time(until_resin_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_resin_recovery_date_fmt'] = f'Full at {notes.resin_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
                     else:
                         data['until_resin_recovery_date_fmt'] = f'Full at {notes.resin_recovery_time.strftime("%Y-%m-%d %I:%M %p")}'
-                else:
-                    data['until_resin_recovery_date_fmt'] = '✨ Full!'
 
                 do_realm_currency = bool(notes.max_realm_currency)
                 is_realm_currency_full = is_realm_currency_recovery_time_datetime = False
@@ -841,15 +843,15 @@ async def job2genshinpy():
 
                     is_realm_currency_full = notes.current_realm_currency >= notes.max_realm_currency
                     is_realm_currency_recovery_time_datetime = isinstance(notes.realm_currency_recovery_time, dt.datetime)
-                    if not is_realm_currency_full and is_realm_currency_recovery_time_datetime:
-                        until_realm_currency_recovery = (notes.realm_currency_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
-                        data['until_realm_currency_recovery_fmt'] = f'({display_time(seconds_to_time(until_realm_currency_recovery), short=True, min_units=2, max_units=2)})'
+                    if is_realm_currency_full:
+                        data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
+                    else:
+                        until_realm_currency_recovery = notes.remaining_realm_currency_recovery_time.total_seconds()
+                        data['until_realm_currency_recovery_fmt'] = f' ({display_time(seconds_to_time(until_realm_currency_recovery), short=True, min_units=2, max_units=2)})'
                         if timezone:
                             data['until_realm_currency_recovery_date_fmt'] = f'Full at {notes.realm_currency_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
                         else:
                             data['until_realm_currency_recovery_date_fmt'] = f'Full at {notes.realm_currency_recovery_time.strftime("%Y-%m-%d %I:%M %p")}'
-                    else:
-                        data['until_realm_currency_recovery_date_fmt'] = '✨ Full!'
 
                     data['realm_currency'] = REALM_CURRENCY_TEMPLATE.format(**data)
                 else:
@@ -858,7 +860,7 @@ async def job2genshinpy():
                 do_transformer = notes.remaining_transformer_recovery_time != None
                 is_transformer_ready = until_transformer_recovery = False
                 if do_transformer:
-                    until_transformer_recovery = ceil((notes.transformer_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds())
+                    until_transformer_recovery = notes.remaining_transformer_recovery_time.total_seconds()
                     if until_transformer_recovery > 0:
                         recovery_date_fmt = '%Y-%m-%d'
                         if notes.remaining_transformer_recovery_time.minutes or notes.remaining_transformer_recovery_time.seconds:
@@ -925,9 +927,8 @@ async def job2genshinpy():
                 is_resin_notify = int(os.environ[RESIN_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_resin_threshold_notify = int(os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_resin_recovery_time_changed = False
-                if is_resin_recovery_time_datetime:
-                    os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovery_time.timestamp())
-                    is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovery_time.timestamp()) > 400
+                os.environ[RESIN_LAST_RECOVERY_TIME] = os.environ[RESIN_LAST_RECOVERY_TIME] if os.environ.get(RESIN_LAST_RECOVERY_TIME) else str(notes.resin_recovery_time.timestamp())
+                is_resin_recovery_time_changed = abs(float(os.environ[RESIN_LAST_RECOVERY_TIME]) - notes.resin_recovery_time.timestamp()) > 400
                 is_any_expedition_completed = data['completed_expeditions'] > 0
 
                 is_realm_currency_threshold = is_realm_currency_notify = is_realm_currency_threshold_notify = is_realm_currency_recovery_time_changed = False
@@ -996,8 +997,7 @@ async def job2genshinpy():
 
                 os.environ[RESIN_NOTIFY_CNT_STR] = os.environ[RESIN_NOTIFY_CNT_STR] if is_full else '0'
                 os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] = os.environ[RESIN_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-                if is_resin_recovery_time_datetime:
-                    os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovery_time.timestamp())
+                os.environ[RESIN_LAST_RECOVERY_TIME] = str(notes.resin_recovery_time.timestamp())
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
 
                 if do_realm_currency:
@@ -1047,12 +1047,12 @@ async def job2genshinpystarrail():
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
-    Trailblaze Power: {current_stamina} / {max_stamina} {until_stamina_recovery_fmt}
+    Trailblaze Power: {current_stamina} / {max_stamina}{until_stamina_recovery_fmt}
      └─ {until_stamina_recovery_date_fmt}
     Reserved Power: {current_reserve_stamina} / 2400
-    Daily Training: {current_train_score} / {max_train_score} {train_status}
-    Simulated Universe: {current_rogue_score} / {max_rogue_score} {rogue_score_status}
-    Echo of War: {remaining_weekly_discounts} / {max_weekly_discounts} {weekly_discounts_status}
+    Daily Training: {current_train_score} / {max_train_score}{train_status}
+    Simulated Universe: {current_rogue_score} / {max_rogue_score}{rogue_score_status}
+    Echo of War: {remaining_weekly_discounts} / {max_weekly_discounts}{weekly_discounts_status}
     Assignment Execution: {completed_expeditions} / {total_expeditions_num}'''
 
             accounts = None
@@ -1083,13 +1083,13 @@ async def job2genshinpystarrail():
                     'current_reserve_stamina': notes.current_reserve_stamina,
                     'current_train_score': notes.current_train_score,
                     'max_train_score': notes.max_train_score,
-                    'train_status': '⏳' if notes.current_train_score < notes.max_train_score else '',
+                    'train_status': ' ⏳' if notes.current_train_score < notes.max_train_score else '',
                     'current_rogue_score': notes.current_rogue_score,
                     'max_rogue_score': notes.max_rogue_score,
-                    'rogue_score_status': '⏳' if notes.current_rogue_score < notes.max_rogue_score else '',
+                    'rogue_score_status': ' ⏳' if notes.current_rogue_score < notes.max_rogue_score else '',
                     'remaining_weekly_discounts': notes.remaining_weekly_discounts,
                     'max_weekly_discounts': notes.max_weekly_discounts,
-                    'weekly_discounts_status': '⏳' if notes.remaining_weekly_discounts > 0 else '',
+                    'weekly_discounts_status': ' ⏳' if notes.remaining_weekly_discounts > 0 else '',
                     'completed_expeditions': 0,
                     'total_expeditions_num': notes.total_expedition_num
                 }
@@ -1105,7 +1105,7 @@ async def job2genshinpystarrail():
                         expedition_data['expedition_status'] = '✨ Completed!'
                         data['completed_expeditions'] += 1
                     else:
-                        remaining_time = max((expedition.completion_time.replace(tzinfo=None) - dt.datetime.now()).total_seconds(), 0)
+                        remaining_time = expedition.remaining_time.total_seconds()
                         expedition_data['expedition_status'] = f'({display_time(seconds_to_time(remaining_time), short=True, min_units=2, max_units=2)})'
                         if not earliest_expedition or expedition.completion_time < earliest_expedition:
                             earliest_expedition = expedition.completion_time
@@ -1118,16 +1118,15 @@ async def job2genshinpystarrail():
                         details.append(f'└─ Earliest at {earliest_expedition.strftime("%Y-%m-%d %I:%M %p")}')
 
                 is_full = notes.current_stamina >= notes.max_stamina
-                is_stamina_recovery_time_datetime = isinstance(notes.stamina_recovery_time, dt.datetime)
-                if not is_full and is_stamina_recovery_time_datetime:
-                    until_stamina_recovery = (notes.stamina_recovery_time.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
-                    data['until_stamina_recovery_fmt'] = f'({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
+                if is_full:
+                    data['until_stamina_recovery_date_fmt'] = '✨ Full!'
+                else:
+                    until_stamina_recovery = notes.stamina_recover_time.total_seconds()
+                    data['until_stamina_recovery_fmt'] = f' ({display_time(seconds_to_time(until_stamina_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_stamina_recovery_date_fmt'] = f'Full at {notes.stamina_recovery_time.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
                     else:
                         data['until_stamina_recovery_date_fmt'] = f'Full at {notes.stamina_recovery_time.strftime("%Y-%m-%d %I:%M %p")}'
-                else:
-                    data['until_stamina_recovery_date_fmt'] = '✨ Full!'
 
                 data['expedition_details'] = '\n     '.join(details)
 
@@ -1171,9 +1170,8 @@ async def job2genshinpystarrail():
                 is_stamina_notify = int(os.environ[STAMINA_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_stamina_threshold_notify = int(os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_stamina_recovery_time_changed = False
-                if is_stamina_recovery_time_datetime:
-                    os.environ[STAMINA_LAST_RECOVERY_TIME] = os.environ[STAMINA_LAST_RECOVERY_TIME] if os.environ.get(STAMINA_LAST_RECOVERY_TIME) else str(notes.stamina_recovery_time.timestamp())
-                    is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - notes.stamina_recovery_time.timestamp()) > 400
+                os.environ[STAMINA_LAST_RECOVERY_TIME] = os.environ[STAMINA_LAST_RECOVERY_TIME] if os.environ.get(STAMINA_LAST_RECOVERY_TIME) else str(notes.stamina_recovery_time.timestamp())
+                is_stamina_recovery_time_changed = abs(float(os.environ[STAMINA_LAST_RECOVERY_TIME]) - notes.stamina_recovery_time.timestamp()) > 400
                 is_any_expedition_completed = data['completed_expeditions'] > 0
 
                 if is_full and is_stamina_notify:
@@ -1197,8 +1195,7 @@ async def job2genshinpystarrail():
 
                 os.environ[STAMINA_NOTIFY_CNT_STR] = os.environ[STAMINA_NOTIFY_CNT_STR] if is_full else '0'
                 os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] = os.environ[STAMINA_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-                if is_stamina_recovery_time_datetime:
-                    os.environ[STAMINA_LAST_RECOVERY_TIME] = str(notes.stamina_recovery_time.timestamp())
+                os.environ[STAMINA_LAST_RECOVERY_TIME] = str(notes.stamina_recovery_time.timestamp())
                 os.environ[EXPEDITION_NOTIFY_CNT_STR] = os.environ[EXPEDITION_NOTIFY_CNT_STR] if is_any_expedition_completed else '0'
 
                 title = status
@@ -1242,9 +1239,9 @@ async def job2genshinpyzzz():
 ☁️ Real-Time Notes
 📅 {today}
 🔅 {nickname} {server_name} Lv. {level}
-    Battery Charge: {current_battery} / {max_battery} {until_battery_recovery_fmt}
+    Battery Charge: {current_battery} / {max_battery}{until_battery_recovery_fmt}
      └─ {until_battery_recovery_date_fmt}
-    Engagement Today: {current_engagement} / {max_engagement} {engagement_status}
+    Engagement Today: {current_engagement} / {max_engagement}{engagement_status}
     Scratch Card Mania: {scratch_card_status}
     Video Store Management: {video_store_status}'''
 
@@ -1275,7 +1272,7 @@ async def job2genshinpyzzz():
                     'until_battery_recovery_fmt': '',
                     'current_engagement': notes.engagement.current,
                     'max_engagement': notes.engagement.max,
-                    'engagement_status': '⏳' if notes.engagement.current < notes.engagement.max else '',
+                    'engagement_status': ' ⏳' if notes.engagement.current < notes.engagement.max else '',
                     'scratch_card_status': 'Complete' if notes.scratch_card_completed else 'Available ⏳',
                     'video_store_status': VIDEO_STORE_STATUS[notes.video_store_state.name]
                 }
@@ -1283,16 +1280,15 @@ async def job2genshinpyzzz():
                 details = []
 
                 is_full = notes.battery_charge.current >= notes.battery_charge.max
-                is_battery_recovery_time_datetime = isinstance(notes.battery_charge.full_datetime, dt.datetime)
-                if not is_full and is_battery_recovery_time_datetime:
-                    until_battery_recovery = (notes.battery_charge.full_datetime.replace(tzinfo=None) - dt.datetime.now(tz=None)).total_seconds()
-                    data['until_battery_recovery_fmt'] = f'({display_time(seconds_to_time(until_battery_recovery), short=True, min_units=2, max_units=2)})'
+                if is_full:
+                    data['until_battery_recovery_date_fmt'] = '✨ Full!'
+                else:
+                    until_battery_recovery = notes.battery_charge.seconds_till_full
+                    data['until_battery_recovery_fmt'] = f' ({display_time(seconds_to_time(until_battery_recovery), short=True, min_units=2, max_units=2)})'
                     if timezone:
                         data['until_battery_recovery_date_fmt'] = f'Full at {notes.battery_charge.full_datetime.astimezone(tz=timezone).strftime("%Y-%m-%d %I:%M %p")} {utc_offset_str}'
                     else:
                         data['until_battery_recovery_date_fmt'] = f'Full at {notes.battery_charge.full_datetime.strftime("%Y-%m-%d %I:%M %p")}'
-                else:
-                    data['until_battery_recovery_date_fmt'] = '✨ Full!'
 
                 message = BATTERY_TIMER_TEMPLATE.format(**data)
                 if details:
@@ -1332,9 +1328,8 @@ async def job2genshinpyzzz():
                 is_battery_notify = int(os.environ[BATTERY_NOTIFY_CNT_STR]) <= config.FULL_STAMINA_REPEAT_NOTIFY
                 is_battery_threshold_notify = int(os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR]) < 1
                 is_battery_recovery_time_changed = False
-                if is_battery_recovery_time_datetime:
-                    os.environ[BATTERY_LAST_RECOVERY_TIME] = os.environ[BATTERY_LAST_RECOVERY_TIME] if os.environ.get(BATTERY_LAST_RECOVERY_TIME) else str(notes.battery_charge.full_datetime.timestamp())
-                    is_battery_recovery_time_changed = abs(float(os.environ[BATTERY_LAST_RECOVERY_TIME]) - notes.battery_charge.full_datetime.timestamp()) > 400
+                os.environ[BATTERY_LAST_RECOVERY_TIME] = os.environ[BATTERY_LAST_RECOVERY_TIME] if os.environ.get(BATTERY_LAST_RECOVERY_TIME) else str(notes.battery_charge.full_datetime.timestamp())
+                is_battery_recovery_time_changed = abs(float(os.environ[BATTERY_LAST_RECOVERY_TIME]) - notes.battery_charge.full_datetime.timestamp()) > 400
 
                 if is_full and is_battery_notify:
                     os.environ[BATTERY_NOTIFY_CNT_STR] = str(int(os.environ[BATTERY_NOTIFY_CNT_STR]) + 1)
@@ -1353,8 +1348,7 @@ async def job2genshinpyzzz():
 
                 os.environ[BATTERY_NOTIFY_CNT_STR] = os.environ[BATTERY_NOTIFY_CNT_STR] if is_full else '0'
                 os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] = os.environ[BATTERY_THRESHOLD_NOTIFY_CNT_STR] if is_threshold else '0'
-                if is_battery_recovery_time_datetime:
-                    os.environ[BATTERY_LAST_RECOVERY_TIME] = str(notes.battery_charge.full_datetime.timestamp())
+                os.environ[BATTERY_LAST_RECOVERY_TIME] = str(notes.battery_charge.full_datetime.timestamp())
 
                 title = status
                 log.info(title)
