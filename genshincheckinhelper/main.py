@@ -787,9 +787,10 @@ async def job2genshinpy():
 
                     if isinstance(notes.daily_task.stored_attendance_refresh_countdown, dt.timedelta):
                         until_stored_attendance_refresh = ceil(notes.daily_task.stored_attendance_refresh_countdown.total_seconds())
-                        data['stored_attendance_refresh_fmt'] = f'({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
+                        data['stored_attendance_refresh_fmt'] = f' ({display_time(seconds_to_time(until_stored_attendance_refresh), short=True, max_units=1)})'
                     else:
-                        data['stored_attendance_refresh_fmt'] = ''
+                        # hoyolab does not display refresh time when it's more than a version patch's duration (42d)
+                        data['stored_attendance_refresh_fmt'] = ' (+42 d)'
 
                     data['attendances'] = ATTENDANCES_TEMPLATE.format(**data)
                 else:
