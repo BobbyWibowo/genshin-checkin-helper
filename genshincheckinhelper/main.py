@@ -1389,26 +1389,37 @@ async def run_once():
 
 
 async def main():
-    log.info(banner)
+    try:
+        log.info(banner)
 
-    gh.set_lang(config.LANGUAGE)
+        gh.set_lang(config.LANGUAGE)
 
-    await run_once()
+        await run_once()
 
-    # schedule all_job2()
-    if config.CHECK_NOTES_SECS_RANGE:
-        t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
-        schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(all_job2))
-    else:
-        schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(all_job2))
+        # schedule all_job2()
+        if config.CHECK_NOTES_SECS_RANGE:
+            t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
+            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(all_job2))
+        else:
+            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(all_job2))
 
-    # schedule job1()
-    schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
+        # schedule job1()
+        schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
 
-    while True:
-        await asyncio.sleep(1)
-        schedule.run_pending()
+        if (bool(os.environ.get('RUN_ONCE'))):
+            print('"RUN_ONCE" environment is set, exiting.')
+            return
+
+        while True:
+            await asyncio.sleep(1)
+            schedule.run_pending()
+
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        exit(1)
