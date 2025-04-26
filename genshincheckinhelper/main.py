@@ -1382,8 +1382,15 @@ async def run_once():
             if 'UID_' in i:
                 del os.environ[i]
 
-        await all_job2()
-        await job1()
+        if bool(os.environ.get('SKIP_NOTES')):
+            print('"SKIP_NOTES" environment is set.')
+        else:
+            await all_job2()
+
+        if bool(os.environ.get('SKIP_CHECK_IN')):
+            print('"SKIP_CHECK_IN" environment is set.')
+        else:
+            await job1()
     except Exception as e:
         print(e)
 
@@ -1397,16 +1404,18 @@ async def main():
         await run_once()
 
         # schedule all_job2()
-        if config.CHECK_NOTES_SECS_RANGE:
-            t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
-            schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(all_job2))
-        else:
-            schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(all_job2))
+        if not bool(os.environ.get('SKIP_NOTES')):
+            if config.CHECK_NOTES_SECS_RANGE:
+                t1, t2 = config.CHECK_NOTES_SECS_RANGE.split('-')
+                schedule.every(int(t1)).to(int(t2)).seconds.do(lambda: schedulecatch(all_job2))
+            else:
+                schedule.every(int(config.CHECK_NOTES_SECS)).seconds.do(lambda: schedulecatch(all_job2))
 
         # schedule job1()
-        schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
+        if not bool(os.environ.get('SKIP_CHECK_IN')):
+            schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
 
-        if (bool(os.environ.get('RUN_ONCE'))):
+        if bool(os.environ.get('RUN_ONCE')):
             print('"RUN_ONCE" environment is set, exiting.')
             return
 
