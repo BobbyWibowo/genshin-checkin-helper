@@ -1,9 +1,10 @@
-genshinhelper @ git+https://github.com/y1ndan/genshinhelper2.git@1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd
 onepush
 schedule
 nest_asyncio
-genshin @ git+https://github.com/thesadru/genshin.py.git@2dcda48b4c545f9291a5a32a2fb8acf8ceedf029
 aiohttp
 pydantic
 anticaptchaofficial
 qrcode[pil]
+genshinhelper @ git+https://github.com/BobbyWibowo/genshinhelper2@1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd
+genshin @ git+https://github.com/thesadru/genshin.py.git@c37c3af9461236e988eb5a7ab7af286f1e52c7e5
+tenacity

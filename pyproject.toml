@@ -7,15 +7,16 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.9, <3.12"
-genshinhelper = {git = "https://github.com/y1ndan/genshinhelper2.git", rev = "1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd"}
 onepush = "^1.3.0"
 schedule = "^1.2.1"
 nest-asyncio = "^1.6.0"
-genshin = {git = "https://github.com/thesadru/genshin.py.git", rev = "2dcda48b4c545f9291a5a32a2fb8acf8ceedf029"}
 aiohttp = "^3.9.5"
 pydantic = "^2.7.1"
 anticaptchaofficial = "^1.0.60"
 qrcode = {extras = ["pil"], version = "^7.4.2"}
+genshinhelper = {git = "https://github.com/BobbyWibowo/genshinhelper2", rev = "1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd"}
+genshin = {git = "https://github.com/thesadru/genshin.py", rev = "c37c3af9461236e988eb5a7ab7af286f1e52c7e5"}
+tenacity = "^9.1.2"
 
 [tool.poetry.dev-dependencies]
 
