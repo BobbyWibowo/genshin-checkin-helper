@@ -1383,12 +1383,12 @@ async def run_once():
                 del os.environ[i]
 
         if bool(os.environ.get('SKIP_NOTES')):
-            print('"SKIP_NOTES" environment is set.')
+            log.info('"SKIP_NOTES" environment is set.')
         else:
             await all_job2()
 
         if bool(os.environ.get('SKIP_CHECK_IN')):
-            print('"SKIP_CHECK_IN" environment is set.')
+            log.info('"SKIP_CHECK_IN" environment is set.')
         else:
             await job1()
     except Exception as e:
@@ -1416,7 +1416,7 @@ async def main():
             schedule.every().day.at(config.CHECK_IN_TIME).do(lambda: schedulecatch(job1))
 
         if bool(os.environ.get('RUN_ONCE')):
-            print('"RUN_ONCE" environment is set, exiting.')
+            log.info('"RUN_ONCE" environment is set, exiting.')
             return
 
         while True:
