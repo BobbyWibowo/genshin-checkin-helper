@@ -15,10 +15,8 @@ pydantic = "^2.7.1"
 anticaptchaofficial = "^1.0.60"
 qrcode = {extras = ["pil"], version = "^7.4.2"}
 genshinhelper = {git = "https://github.com/BobbyWibowo/genshinhelper2", rev = "1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd"}
-genshin = {git = "https://github.com/thesadru/genshin.py", rev = "c37c3af9461236e988eb5a7ab7af286f1e52c7e5"}
+genshin = "^1.7.26"
 tenacity = "^9.1.2"
-
-[tool.poetry.dev-dependencies]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

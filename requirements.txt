@@ -6,5 +6,5 @@ pydantic
 anticaptchaofficial
 qrcode[pil]
 genshinhelper @ git+https://github.com/BobbyWibowo/genshinhelper2@1382b89d0ee1f5dfcbe1425398fb4cfc260ddcdd
-genshin @ git+https://github.com/thesadru/genshin.py.git@c37c3af9461236e988eb5a7ab7af286f1e52c7e5
+genshin
 tenacity
